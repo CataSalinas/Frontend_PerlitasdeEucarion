@@ -1,11 +1,21 @@
-export async function cargarProductos(url = '/productos.json') {
-  const respuesta = await fetch(url)
-  if (!respuesta.ok) {
-    throw new Error('No se pudo cargar el catálogo (HTTP ' + respuesta.status + ')')
-  }
-  const datos = await respuesta.json()
-  if (!Array.isArray(datos)) {
-    throw new Error('El JSON del catálogo no tiene el formato esperado')
-  }
-  return datos
+import { apiFetch } from './api.js'
+
+export function listarProductos() {
+  return apiFetch('/productos')
+}
+
+export function obtenerProducto(id) {
+  return apiFetch(`/productos/${id}`)
+}
+
+export function crearProducto(datos) {
+  return apiFetch('/productos', { method: 'POST', body: datos })
+}
+
+export function actualizarProducto(id, datos) {
+  return apiFetch(`/productos/${id}`, { method: 'PUT', body: datos })
+}
+
+export function eliminarProducto(id) {
+  return apiFetch(`/productos/${id}`, { method: 'DELETE' })
 }
