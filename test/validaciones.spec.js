@@ -1,4 +1,7 @@
-import { validarTexto, validarCantidad, formatearPrecio } from '../src/utils/validaciones.js'
+import {
+  validarTexto, validarCantidad, validarNoNegativo, validarCorreo,
+  formatearPrecio, etiquetaEstado, claseEstado
+} from '../src/utils/validaciones.js'
 
 describe('validaciones (funciones puras)', () => {
   describe('validarTexto', () => {
@@ -31,11 +34,45 @@ describe('validaciones (funciones puras)', () => {
     })
   })
 
+  describe('validarNoNegativo', () => {
+    it('acepta cero y decimales positivos', () => {
+      expect(validarNoNegativo('0')).toBeTrue()
+      expect(validarNoNegativo(1990.5)).toBeTrue()
+    })
+    it('rechaza negativos y valores no numéricos', () => {
+      expect(validarNoNegativo('-1')).toBeFalse()
+      expect(validarNoNegativo('abc')).toBeFalse()
+      expect(validarNoNegativo('')).toBeFalse()
+    })
+  })
+
+  describe('validarCorreo', () => {
+    it('acepta correos con formato básico', () => {
+      expect(validarCorreo('admin@perlitas.cl')).toBeTrue()
+    })
+    it('rechaza correos sin @ o sin dominio', () => {
+      expect(validarCorreo('adminperlitas.cl')).toBeFalse()
+      expect(validarCorreo('admin@')).toBeFalse()
+      expect(validarCorreo('   ')).toBeFalse()
+    })
+  })
+
   describe('formatearPrecio', () => {
     it('antepone $ y usa separador de miles', () => {
       const texto = formatearPrecio(9990)
       expect(texto.startsWith('$')).toBeTrue()
       expect(texto).toMatch(/9.?990/)
+    })
+  })
+
+  describe('etiquetas de estado', () => {
+    it('traduce los estados del contrato al español', () => {
+      expect(etiquetaEstado('EN_PREPARACION')).toBe('En preparación')
+      expect(etiquetaEstado('CANCELADO')).toBe('Anulado')
+    })
+    it('asigna una clase Bootstrap por estado', () => {
+      expect(claseEstado('ENTREGADO')).toBe('bg-success')
+      expect(claseEstado('PAGADO')).toBe('bg-perla')
     })
   })
 })

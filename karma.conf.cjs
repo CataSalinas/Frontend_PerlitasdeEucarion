@@ -1,3 +1,5 @@
+const webpack = require('webpack')
+
 module.exports = function (config) {
   config.set({
     basePath: '',
@@ -9,11 +11,23 @@ module.exports = function (config) {
       require('karma-jsdom-launcher'),
       require('karma-coverage')
     ],
-    files: [{ pattern: 'test/setup.js', watched: false }, { pattern: 'test/**/*.spec.jsx', watched: false }, { pattern: 'test/**/*.spec.js', watched: false }],
-    preprocessors: { 'test/setup.js': ['webpack'], 'test/**/*.spec.js*': ['webpack'] },
+    files: [
+      { pattern: 'test/setup.js', watched: false },
+      { pattern: 'test/**/*.spec.jsx', watched: false },
+      { pattern: 'test/**/*.spec.js', watched: false }
+    ],
+    preprocessors: {
+      'test/setup.js': ['webpack'],
+      'test/**/*.spec.js*': ['webpack']
+    },
     webpack: {
       mode: 'development',
       devtool: false,
+      plugins: [
+        new webpack.DefinePlugin({
+          'globalThis.VITE_API_URL': JSON.stringify('http://localhost:8080/api/v1')
+        })
+      ],
       resolve: { extensions: ['.js', '.jsx'] },
       module: {
         rules: [{
@@ -32,10 +46,15 @@ module.exports = function (config) {
     reporters: ['progress', 'coverage'],
     coverageReporter: {
       dir: 'coverage',
-      reporters: [{ type: 'html', subdir: 'html' }, { type: 'text-summary' }, { type: 'text' }, { type: 'json-summary', subdir: '.', file: 'resumen.json' }]
+      reporters: [
+        { type: 'html', subdir: 'html' },
+        { type: 'text-summary' },
+        { type: 'text' },
+        { type: 'json-summary', subdir: '.', file: 'resumen.json' }
+      ]
     },
-    browsers: ['ChromeHeadless'],
-    customLaunchers: {},
+    // jsdom es el navegador por defecto: no se requiere Chrome instalado.
+    browsers: ['jsdom'],
     singleRun: true,
     restartOnFileChange: false
   })
