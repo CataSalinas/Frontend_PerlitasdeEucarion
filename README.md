@@ -2,7 +2,8 @@
 
 SPA de **gestión interna** construida con React + Vite + Bootstrap. No es la tienda pública: el objetivo es administrar productos, categorías, órdenes/boletas y usuarios del personal consumiendo una API REST.
 
-- Backend real: Spring Boot del compañero, contrato en `http://localhost:8080/api/v1`.
+- Repositorio: https://github.com/CataSalinas/Frontend_PerlitasdeEucarion
+- Backend real: Spring Boot del compañero en otro repositorio ([ENLACE AL REPO DEL BACKEND]), contrato en `http://localhost:8080/api/v1`.
 - Desarrollo sin backend: `mock-server/` (Express) implementa el mismo contrato.
 - Acceso: solo personal autorizado, con roles `ADMIN` y `VENDEDOR`. No hay registro público.
 
@@ -129,4 +130,4 @@ No hay secretos versionados: `.env` y `node_modules/` están ignorados. La clave
 - [`docs/Guia_Presentacion.md`](docs/Guia_Presentacion.md): guion de demostración y preguntas frecuentes.
 - [`CHECKLIST_RUBRICA.md`](CHECKLIST_RUBRICA.md): verificación final de la entrega.
 
-Los commits siguen **Conventional Commits** (`feat:`, `fix:`, `test:`, `docs:`, `chore:`). No se agregaron remotos ni se hizo push.
+Los commits siguen **Conventional Commits** (`feat:`, `fix:`, `test:`, `docs:`, `chore:`). El repositorio tiene remoto en GitHub y se hizo push; el historial incluye varias ramas fusionadas.
