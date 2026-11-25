@@ -1,30 +1,57 @@
 import { Link, NavLink } from 'react-router-dom'
-import { useCarrito } from '../context/CarritoContext.jsx'
-import { formatearPrecio } from '../utils/validaciones.js'
+import { useAuth } from '../context/AuthContext.jsx'
+
+// Cada enlace declara los roles que pueden verlo. El backend sigue siendo quien autoriza.
+const ENLACES = [
+  { to: '/panel', texto: 'Panel', icono: 'bi-speedometer2', roles: ['ADMIN', 'VENDEDOR'] },
+  { to: '/productos', texto: 'Productos', icono: 'bi-box-seam', roles: ['ADMIN', 'VENDEDOR'] },
+  { to: '/categorias', texto: 'Categorías', icono: 'bi-tags', roles: ['ADMIN'] },
+  { to: '/ordenes', texto: 'Órdenes', icono: 'bi-receipt', roles: ['ADMIN', 'VENDEDOR'] },
+  { to: '/ordenes/nueva', texto: 'Registrar venta', icono: 'bi-cart-plus', roles: ['ADMIN'] },
+  { to: '/usuarios', texto: 'Usuarios', icono: 'bi-people', roles: ['ADMIN'] }
+]
 
 export default function Navbar() {
-  const { total, cantidadTotal } = useCarrito()
+  const { usuario, rol, hasRole, logout } = useAuth()
+  const visibles = ENLACES.filter((enlace) => hasRole(...enlace.roles))
+  // Tras cerrar sesión el provider notifica el cambio antes de navegar: el
+  // navbar se renderiza un instante sin usuario y no debe romperse.
+  const nombre = usuario ? `${usuario.nombre ?? ''} ${usuario.apellidos ?? ''}`.trim() : ''
+
   return (
     <nav className="navbar navbar-expand-lg bg-perla-suave border-bottom">
       <div className="container">
-        <Link className="navbar-brand fw-bold" to="/">Perlitas de Eucarión</Link>
+        <Link className="navbar-brand fw-bold" to="/panel">
+          <i className="bi bi-gem me-2"></i>Perlitas de Eucarión
+          <small className="d-block small fw-normal">Gestión interna</small>
+        </Link>
         <button className="navbar-toggler" type="button" data-bs-toggle="collapse"
-          data-bs-target="#menuPrincipal" aria-controls="menuPrincipal" aria-label="Abrir menú">
+          data-bs-target="#menuGestion" aria-controls="menuGestion" aria-label="Abrir menú">
           <span className="navbar-toggler-icon"></span>
         </button>
-        <div className="collapse navbar-collapse" id="menuPrincipal">
+        <div className="collapse navbar-collapse" id="menuGestion">
           <ul className="navbar-nav me-auto">
-            <li className="nav-item"><NavLink className="nav-link" to="/" end>Inicio</NavLink></li>
-            <li className="nav-item"><NavLink className="nav-link" to="/productos">Productos</NavLink></li>
-            <li className="nav-item"><NavLink className="nav-link" to="/categorias">Categorias</NavLink></li>
-            <li className="nav-item"><NavLink className="nav-link" to="/registrar">Registrar producto</NavLink></li>
-            <li className="nav-item"><NavLink className="nav-link" to="/admin/productos">Administrar productos</NavLink></li>
-            <li className="nav-item"><NavLink className="nav-link" to="/ofertas">Ofertas</NavLink></li>
-            <li className="nav-item"><NavLink className="nav-link" to="/admin/ordenes">Administrar ordenes</NavLink></li>
+            {visibles.map((enlace) => (
+              <li className="nav-item" key={enlace.to}>
+                <NavLink
+                  to={enlace.to}
+                  end={enlace.to === '/panel'}
+                  className={({ isActive }) => 'nav-link' + (isActive ? ' active fw-semibold' : '')}
+                >
+                  <i className={'bi ' + enlace.icono + ' me-1'}></i>{enlace.texto}
+                </NavLink>
+              </li>
+            ))}
           </ul>
-          <Link className="btn btn-perla" to="/carrito">
-            <i className="bi bi-cart4"></i> Carrito ({cantidadTotal}) <strong>{formatearPrecio(total)}</strong>
-          </Link>
+          <div className="d-flex align-items-center gap-3 flex-wrap">
+            <span className="navbar-text small">
+              {nombre}{' '}
+              <span className={rol === 'ADMIN' ? 'badge bg-perla' : 'badge bg-outline-perla'}>{rol ?? ''}</span>
+            </span>
+            <button type="button" className="btn btn-outline-perla btn-sm" onClick={logout}>
+              <i className="bi bi-box-arrow-right me-1"></i>Cerrar sesión
+            </button>
+          </div>
         </div>
       </div>
     </nav>

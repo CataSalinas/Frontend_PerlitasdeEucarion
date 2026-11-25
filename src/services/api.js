@@ -1,0 +1,233 @@
+import { API_URL } from '../config.js'
+
+/**
+ * Capa de transporte hacia la API REST.
+ * - Antepone VITE_API_URL.
+ * - Agrega el header Authorization: Bearer <accessToken>.
+ * - Si recibe 401, intenta UNA renovación con el refresh token y reintenta una sola vez.
+ * - Normaliza los errores del backend usando el campo `message`.
+ */
+export const CLAVES_SESION = {
+  accessToken: 'perlitas_accessToken',
+  refreshToken: 'perlitas_refreshToken',
+  usuario: 'perlitas_usuario'
+}
+
+const oyentesSesion = new Set()
+let oyenteCierre = null
+let promesaRefresh = null
+
+export class ApiError extends Error {
+  constructor(message, status, payload = null) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.payload = payload
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Suscripciones: permiten que AuthContext reaccione a cambios de la capa API
+// ---------------------------------------------------------------------------
+
+export function suscribirSesion(funcion) {
+  oyentesSesion.add(funcion)
+  return () => oyentesSesion.delete(funcion)
+}
+
+function notificarSesion() {
+  oyentesSesion.forEach((funcion) => funcion(leerSesion()))
+}
+
+export function registrarCierreSesion(funcion) {
+  oyenteCierre = funcion
+  return () => { if (oyenteCierre === funcion) oyenteCierre = null }
+}
+
+function cerrarSesionForzada() {
+  limpiarSesion()
+  if (typeof oyenteCierre === 'function') {
+    oyenteCierre()
+  } else if (typeof window !== 'undefined' && window.location) {
+    try { window.location.assign('/login') } catch { /* jsdom no implementa navegación */ }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Persistencia de sesión (localStorage)
+// ---------------------------------------------------------------------------
+
+export function leerSesion() {
+  try {
+    const accessToken = localStorage.getItem(CLAVES_SESION.accessToken)
+    const refreshToken = localStorage.getItem(CLAVES_SESION.refreshToken)
+    const usuario = JSON.parse(localStorage.getItem(CLAVES_SESION.usuario) || 'null')
+    if (!accessToken || !refreshToken || !usuario) return null
+    return { accessToken, refreshToken, usuario }
+  } catch {
+    return null
+  }
+}
+
+export function guardarSesion(datos) {
+  if (!datos || !datos.accessToken || !datos.usuario) return null
+  localStorage.setItem(CLAVES_SESION.accessToken, datos.accessToken)
+  localStorage.setItem(CLAVES_SESION.refreshToken, datos.refreshToken || '')
+  localStorage.setItem(CLAVES_SESION.usuario, JSON.stringify(datos.usuario))
+  notificarSesion()
+  return leerSesion()
+}
+
+export function limpiarSesion() {
+  Object.values(CLAVES_SESION).forEach((clave) => localStorage.removeItem(clave))
+  notificarSesion()
+}
+
+// ---------------------------------------------------------------------------
+// JWT: lectura del claim `exp` (sin verificar firma; eso lo hace el backend)
+// ---------------------------------------------------------------------------
+
+export function decodificarJwt(token) {
+  try {
+    const parte = String(token).split('.')[1]
+    if (!parte) return null
+    const base64 = parte.replace(/-/g, '+').replace(/_/g, '/')
+    const relleno = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
+    return JSON.parse(atob(relleno))
+  } catch {
+    return null
+  }
+}
+
+export function obtenerExpiracion(token) {
+  const payload = decodificarJwt(token)
+  return payload && typeof payload.exp === 'number' ? payload.exp : null
+}
+
+export function tokenExpirado(token, ahora = Date.now()) {
+  const exp = obtenerExpiracion(token)
+  return exp !== null && exp * 1000 <= ahora
+}
+
+// ---------------------------------------------------------------------------
+// Renovación de access token (una sola petición aunque fallen varias en paralelo)
+// ---------------------------------------------------------------------------
+
+export function renovarAccessToken() {
+  if (promesaRefresh) return promesaRefresh
+
+  const sesion = leerSesion()
+  if (!sesion || !sesion.refreshToken) {
+    return Promise.reject(new ApiError('Su sesión expiró. Inicie sesión nuevamente.', 401))
+  }
+
+  promesaRefresh = (async () => {
+    try {
+      let respuesta
+      try {
+        respuesta = await fetch(`${API_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ refreshToken: sesion.refreshToken })
+        })
+      } catch {
+        throw new ApiError('No se pudo conectar con el servidor', 0)
+      }
+
+      if (!respuesta.ok) {
+        let payload = null
+        try { payload = await respuesta.json() } catch { /* cuerpo vacío */ }
+        throw new ApiError(
+          (payload && payload.message) || 'No fue posible renovar la sesión',
+          respuesta.status,
+          payload
+        )
+      }
+
+      const datos = await respuesta.json()
+      if (!datos.accessToken || !datos.usuario) {
+        throw new ApiError('La respuesta de renovación no tiene el formato esperado', 500, datos)
+      }
+      guardarSesion(datos)
+      return datos
+    } finally {
+      promesaRefresh = null
+    }
+  })()
+
+  return promesaRefresh
+}
+
+// ---------------------------------------------------------------------------
+// petición genérica
+// ---------------------------------------------------------------------------
+
+function construirUrl(ruta) {
+  if (/^https?:\/\//i.test(ruta)) return ruta
+  return `${API_URL}${ruta.startsWith('/') ? ruta : `/${ruta}`}`
+}
+
+function mensajeDelBackend(respuesta, payload) {
+  if (payload && typeof payload.message === 'string' && payload.message.trim()) return payload.message
+  if (respuesta.status === 401) return 'No autorizado'
+  if (respuesta.status === 403) return 'No tiene permisos para realizar esta acción'
+  if (respuesta.status === 404) return 'Recurso no encontrado'
+  return `Error del servidor (${respuesta.status})`
+}
+
+/**
+ * @param {string} ruta ruta relativa a VITE_API_URL
+ * @param {object} opciones { method, body, auth = true, reintentar = true, signal }
+ */
+export async function apiFetch(ruta, opciones = {}) {
+  const { method = 'GET', body, auth = true, reintentar = true, signal } = opciones
+  const sesion = leerSesion()
+  const cabeceras = { Accept: 'application/json' }
+
+  if (body !== undefined) cabeceras['Content-Type'] = 'application/json'
+  if (auth && sesion && sesion.accessToken) {
+    cabeceras.Authorization = `Bearer ${sesion.accessToken}`
+  }
+
+  let respuesta
+  try {
+    respuesta = await fetch(construirUrl(ruta), {
+      method,
+      headers: cabeceras,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal
+    })
+  } catch {
+    throw new ApiError('No se pudo conectar con el servidor', 0)
+  }
+
+  if (!respuesta.ok) {
+    let payload = null
+    try { payload = await respuesta.json() } catch { /* cuerpo vacío */ }
+
+    if (respuesta.status === 401 && auth) {
+      if (reintentar && sesion && sesion.refreshToken) {
+        try {
+          await renovarAccessToken()
+          // Reintento único: `reintentar: false` evita bucles si el access sigue siendo rechazado.
+          return apiFetch(ruta, { ...opciones, reintentar: false })
+        } catch (error) {
+          cerrarSesionForzada()
+          throw error
+        }
+      }
+      cerrarSesionForzada()
+    }
+
+    throw new ApiError(mensajeDelBackend(respuesta, payload), respuesta.status, payload)
+  }
+
+  if (respuesta.status === 204) return null
+  try {
+    return await respuesta.json()
+  } catch {
+    return null
+  }
+}
+
+export default apiFetch

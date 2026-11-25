@@ -1,32 +1,65 @@
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import { AuthProvider } from '../src/context/AuthContext.jsx'
 import Productos from '../src/pages/Productos.jsx'
-import { Envoltorio, mockCatalogo } from './helpers.jsx'
+import {
+  CATEGORIAS_FALSAS, PRODUCTOS_FALSOS, iniciarSesion, mockFetch, respuestaOk
+} from './helpers.jsx'
 
-describe('Página Productos (datos desde JSON mockeado)', () => {
-  beforeEach(() => localStorage.clear())
-  afterEach(() => cleanup())
+function renderizar(rol) {
+  iniciarSesion(rol)
+  return render(
+    <MemoryRouter>
+      <AuthProvider><Productos /></AuthProvider>
+    </MemoryRouter>
+  )
+}
 
-  it('muestra "Cargando" y luego los productos del JSON', async () => {
+function mockCatalogo() {
+  return mockFetch((url, opciones) => {
+    if (String(url).includes('/categorias')) return respuestaOk(CATEGORIAS_FALSAS)
+    if (String(url).includes('/productos')) {
+      if (opciones.method === 'DELETE') return respuestaOk(null, 204)
+      return respuestaOk(PRODUCTOS_FALSOS)
+    }
+    return respuestaOk([])
+  })
+}
+
+describe('Página Productos', () => {
+  it('ADMIN ve botones de nuevo, editar y eliminar', async () => {
     mockCatalogo()
-    render(<Envoltorio><Productos /></Envoltorio>)
-    expect(screen.getByRole('status').textContent).toContain('Cargando')
-    expect(await screen.findByText('Collar de perlas')).toBeTruthy()
-    expect(screen.getByText('Aros de plata')).toBeTruthy()
+    renderizar('ADMIN')
+
+    await waitFor(() => expect(screen.getByText('Collar de perlas')).toBeTruthy())
+    expect(screen.getByRole('link', { name: /Nuevo producto/ })).toBeTruthy()
+    expect(screen.getAllByText('Editar').length).toBe(2)
+    expect(screen.getAllByText('Eliminar').length).toBe(2)
   })
 
-  it('filtra por categoría al hacer clic en un botón', async () => {
+  it('VENDEDOR no ve botones de escritura, solo puede ver detalle', async () => {
     mockCatalogo()
-    render(<Envoltorio><Productos /></Envoltorio>)
-    await screen.findByText('Collar de perlas')
-    fireEvent.click(screen.getByRole('button', { name: 'Aros' }))
-    expect(screen.queryByText('Collar de perlas')).toBeNull()
-    expect(screen.getByText('Aros de plata')).toBeTruthy()
+    renderizar('VENDEDOR')
+
+    await waitFor(() => expect(screen.getByText('Collar de perlas')).toBeTruthy())
+    expect(screen.queryByRole('link', { name: /Nuevo producto/ })).toBeNull()
+    expect(screen.queryByText('Editar')).toBeNull()
+    expect(screen.queryByText('Eliminar')).toBeNull()
+    expect(screen.getAllByRole('link', { name: 'Ver' }).length).toBe(2)
   })
 
-  it('muestra un mensaje de error si el JSON no se puede cargar', async () => {
-    spyOn(window, 'fetch').and.returnValue(Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve([]) }))
-    render(<Envoltorio><Productos /></Envoltorio>)
-    const alerta = await screen.findByRole('alert')
-    expect(alerta.textContent).toContain('HTTP 500')
+  it('eliminar pide confirmación y llama a DELETE', async () => {
+    const fetchSpy = mockCatalogo()
+    spyOn(window, 'confirm').and.returnValue(true)
+    renderizar('ADMIN')
+
+    await waitFor(() => expect(screen.getByText('Collar de perlas')).toBeTruthy())
+    fireEvent.click(screen.getAllByText('Eliminar')[0])
+
+    await waitFor(() => {
+      const llamada = fetchSpy.calls.allArgs().find((args) => args[1].method === 'DELETE')
+      expect(llamada).toBeTruthy()
+      expect(llamada[0]).toContain('/productos/1')
+    })
   })
 })
