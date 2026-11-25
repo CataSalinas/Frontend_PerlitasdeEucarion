@@ -7,8 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "mock": "node mock-server/server.js",
     "test": "karma start karma.conf.cjs --single-run",
     "test:jsdom": "karma start karma.conf.cjs --single-run --browsers jsdom",
+    "test:chrome": "karma start karma.conf.cjs --single-run --browsers ChromeHeadless",
     "test:watch": "karma start karma.conf.cjs --no-single-run"
   },
   "dependencies": {
