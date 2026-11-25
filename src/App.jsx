@@ -1,0 +1,46 @@
+ import { Routes, Route } from 'react-router-dom'
+import Navbar from './components/Navbar.jsx'
+import Footer from './components/Footer.jsx'
+import Inicio from './pages/Inicio.jsx'
+import Productos from './pages/Productos.jsx'
+import Carrito from './pages/Carrito.jsx'
+import RegistrarProducto from './pages/RegistrarProducto.jsx'
+import AdministrarProductos from './pages/AdministrarProductos.jsx'
+import DetalleProducto from './pages/DetalleProducto.jsx'
+import EditarProducto from './pages/EditarProducto.jsx'
+import Checkout from './pages/Checkout.jsx'
+import CompraExitosa from './pages/CompraExitosa.jsx'
+import Categorias from './pages/Categorias.jsx'
+import CompraError from './pages/CompraError.jsx'
+import Ofertas from './pages/Ofertas.jsx'
+import AdministrarOrdenes from './pages/AdministrarOrdenes.jsx'
+import DetalleOrden from './pages/DetalleOrden.jsx'
+import ProductoDetalle from './pages/ProductoDetalle.jsx'
+
+export default function App() {
+  return (
+    <>
+      <Navbar />
+      <main className="container py-4">
+        <Routes>
+          <Route path="/" element={<Inicio />} />
+          <Route path="/productos" element={<Productos />} />
+          <Route path="/carrito" element={<Carrito />} />
+          <Route path="/registrar" element={<RegistrarProducto />} />
+          <Route path="/admin/productos" element={<AdministrarProductos />} />
+          <Route path="/admin/productos/:id" element={<DetalleProducto />} />
+          <Route path="/admin/productos/:id/editar" element={<EditarProducto />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/compra-exitosa" element={<CompraExitosa />} />
+          <Route path="/categorias" element={<Categorias />} />
+          <Route path="/compra-error" element={<CompraError />} />
+          <Route path="/ofertas" element={<Ofertas />} />
+          <Route path="/admin/ordenes" element={<AdministrarOrdenes />} />
+          <Route path="/admin/ordenes/:id" element={<DetalleOrden />} />
+          <Route path="/productos/:id" element={<ProductoDetalle />} />
+        </Routes>
+      </main>
+      <Footer />
+    </>
+  )
+}
