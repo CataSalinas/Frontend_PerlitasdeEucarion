@@ -1,6 +1,6 @@
 # Checklist de verificación — Entrega frontend Gestión Perlitas de Eucarión
 
-Estado final: **verificado**. Repositorio `perlitas-gestion-frontend`, rama `main`, 7 commits, sin remotos y sin push.
+Estado final: **verificado**. Repositorio en GitHub (`https://github.com/CataSalinas/Frontend_PerlitasdeEucarion`), rama `main`, historial con varias ramas fusionadas y push realizado.
 
 ## Fase 0 — Repositorio base
 
@@ -8,7 +8,7 @@ Estado final: **verificado**. Repositorio `perlitas-gestion-frontend`, rama `mai
 - [x] `main` con commit inicial `chore: inicializar repositorio`.
 - [x] `.gitignore` con `node_modules/`, `dist/`, `coverage/`, `.env`, `.env.*` (excepto `.env.example`) y `mock-server/.env`.
 - [x] Sin secretos versionados: `git ls-files` no muestra `.env`, claves ni certificados.
-- [x] Sin remotos: `git remote -v` vacío; no se hizo push.
+- [x] Repositorio con remoto en GitHub (`https://github.com/CataSalinas/Frontend_PerlitasdeEucarion`) y push realizado.
 
 ## Fase 1 — Mock-server
 
@@ -82,17 +82,7 @@ Estado final: **verificado**. Repositorio `perlitas-gestion-frontend`, rama `mai
 - [x] Persistencia tras "recarga" (desmontar/montar), logout y cierre entre pestañas: cubiertos por `AuthContext.spec.jsx`.
 - [x] Acceso denegado a `/usuarios` y `/productos/nuevo` para VENDEDOR: cubierto por `RutaProtegida.spec.jsx`.
 - [x] Sin secretos en el historial; `node_modules`, `dist` y `coverage` no versionados.
-- [x] Historial en Conventional Commits:
-
-```
-b8462c8 docs: agregar manual, integracion, guia de presentacion y README actualizado
-1d0f6b4 test: agregar suite de API, sesion, roles y pantallas
-18da9c0 feat(gestion): migrar pantallas a REST con rutas y permisos por rol
-c0691c4 feat(auth): sesion persistente con refresh y cierre entre pestanas
-8f4cb1b feat(api): capa fetch con refresh unico y servicios REST
-4bd28d2 feat: agregar servidor mock con contrato REST y permisos por rol
-0e4513d chore: inicializar repositorio
-```
+- [x] Historial en Conventional Commits, con ramas de funcionalidad, pruebas y documentación fusionadas en `main`.
 
 ## Observaciones
 
