@@ -6,27 +6,29 @@
   --perla-claro: #e05780;
   --perla-suave: #ffcad4;
 }
+
 .bg-perla { background-color: var(--perla-oscuro) !important; color: #fff; }
 .bg-perla-suave { background-color: var(--perla-suave) !important; }
+.texto-perla { color: var(--perla-oscuro) !important; }
 .btn-perla { background-color: var(--perla-medio); border-color: var(--perla-medio); color: #fff; }
 .btn-perla:hover { background-color: var(--perla-oscuro); border-color: var(--perla-oscuro); color: #fff; }
-.btn-outline-perla { border-color: var(--perla-medio); color: var(--perla-medio); }
+.btn-outline-perla { border-color: var(--perla-medio); color: var(--perla-medio); background-color: transparent; }
 .btn-outline-perla:hover { background-color: var(--perla-medio); color: #fff; }
+
 .card-producto { transition: box-shadow .3s ease; border-color: var(--perla-suave); }
 .card-producto:hover { box-shadow: 0 4px 8px rgba(0, 0, 0, .2); }
 .mensaje-error { color: var(--perla-medio); font-size: .875rem; }
 
-.oferta-franja {
-  position: absolute;
-  top: 18px;
-  right: -42px;
-  width: 150px;
-  padding: 5px 0;
-  background-color: #c2325b;
-  color: white;
-  text-align: center;
-  font-weight: bold;
-  font-size: 13px;
-  transform: rotate(45deg);
-  z-index: 2;
+/* Panel y tablas de gestión interna */
+.titulo-gestion { color: var(--perla-oscuro); font-weight: 700; }
+.tarjeta-resumen { border-top: 4px solid var(--perla-medio); }
+.tarjeta-resumen .numero { font-size: 2rem; font-weight: 700; color: var(--perla-oscuro); }
+.tabla-gestion thead { background-color: var(--perla-suave); color: var(--perla-oscuro); }
+.tabla-gestion tbody tr:hover { background-color: #fff0f3; }
+.acciones-tabla { min-width: 190px; }
+.login-card { border-top: 5px solid var(--perla-medio); }
+.etiqueta-aviso { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
+.resumen-total { font-size: 1.35rem; color: var(--perla-oscuro); }
+@media (max-width: 576px) {
+  .acciones-tabla { min-width: 0; }
 }

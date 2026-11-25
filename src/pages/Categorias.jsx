@@ -1,34 +1,126 @@
 import { useState } from 'react'
-import { useProductos } from '../context/ProductosContext.jsx'
-import ProductCard from '../components/ProductCard.jsx'
+import { useRecurso } from '../hooks/useRecurso.js'
+import {
+  listarCategorias, crearCategoria, actualizarCategoria, eliminarCategoria
+} from '../services/categoriasService.js'
+import { validarTexto } from '../utils/validaciones.js'
+import { Cargando, ErrorAviso, Vacio } from '../components/Avisos.jsx'
+
 export default function Categorias() {
-  const { productos, cargando, error } = useProductos()
-  const [categoria, setCategoria] = useState('')
-  const categorias = [...new Set(productos.map((p) => p.categoria))]
-  const categoriaActiva = categoria || categorias[0] || ''
-  const productosFiltrados = productos.filter((p) => p.categoria === categoriaActiva)
-  if (cargando) return <p>Cargando categorias...</p>
-  if (error) return <div className="alert alert-danger">{error}</div>
+  const { datos, cargando, error, recargar } = useRecurso(listarCategorias, [])
+  const [nombre, setNombre] = useState('')
+  const [editandoId, setEditandoId] = useState(null)
+  const [errorFormulario, setErrorFormulario] = useState('')
+  const [errorAccion, setErrorAccion] = useState('')
+
+  const categorias = datos || []
+
+  async function guardar(evento) {
+    evento.preventDefault()
+    if (!validarTexto(nombre)) {
+      setErrorFormulario('Debe ingresar un nombre para la categoría.')
+      return
+    }
+    setErrorFormulario('')
+    setErrorAccion('')
+    try {
+      if (editandoId) await actualizarCategoria(editandoId, nombre.trim())
+      else await crearCategoria(nombre.trim())
+      setNombre('')
+      setEditandoId(null)
+      recargar()
+    } catch (e) {
+      setErrorAccion(e.message)
+    }
+  }
+
+  function empezarEdicion(categoria) {
+    setEditandoId(categoria.id)
+    setNombre(categoria.nombre)
+    setErrorFormulario('')
+  }
+
+  function cancelarEdicion() {
+    setEditandoId(null)
+    setNombre('')
+  }
+
+  async function eliminar(categoria) {
+    if (!window.confirm(`¿Eliminar la categoría "${categoria.nombre}"?`)) return
+    try {
+      setErrorAccion('')
+      await eliminarCategoria(categoria.id)
+      if (editandoId === categoria.id) cancelarEdicion()
+      recargar()
+    } catch (e) {
+      setErrorAccion(e.message)
+    }
+  }
+
   return (
     <>
-      <h1 className="h3 mb-4">Categorias</h1>
-      <div className="row g-3 mb-4">
-        {categorias.map((c) => (
-          <div className="col-6 col-md-3" key={c}>
-            <button type="button" className={'card w-100 h-100 p-3 text-center ' + (categoriaActiva === c ? 'border-danger' : '')} onClick={() => setCategoria(c)}>
-              <strong>{c}</strong>
-              <small className="text-muted">{productos.filter((p) => p.categoria === c).length} productos</small>
-            </button>
+      <h1 className="h3 titulo-gestion mb-1">Categorías</h1>
+      <p className="text-muted mb-4">Administre las categorías disponibles para los productos.</p>
+
+      <ErrorAviso error={error} />
+      <ErrorAviso error={errorFormulario} />
+      <ErrorAviso error={errorAccion} />
+
+      <div className="row g-4">
+        <div className="col-12 col-md-5">
+          <div className="card">
+            <div className="card-body">
+              <h2 className="h5 titulo-gestion">
+                {editandoId ? `Editar categoría #${editandoId}` : 'Nueva categoría'}
+              </h2>
+              <form onSubmit={guardar} noValidate>
+                <div className="mb-3">
+                  <label htmlFor="nombreCategoria" className="form-label">Nombre</label>
+                  <input id="nombreCategoria" className="form-control" value={nombre}
+                    onChange={(e) => setNombre(e.target.value)} placeholder="Ej.: Colgantes" />
+                </div>
+                <div className="d-flex gap-2">
+                  <button type="submit" className="btn btn-perla">Guardar</button>
+                  {editandoId && (
+                    <button type="button" className="btn btn-outline-secondary" onClick={cancelarEdicion}>
+                      Cancelar
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
           </div>
-        ))}
-      </div>
-      <h2 className="h4 mb-3">{categoriaActiva}</h2>
-      <div className="row g-3">
-        {productosFiltrados.map((producto) => (
-          <div className="col-12 col-sm-6 col-lg-4" key={producto.id}>
-            <ProductCard producto={producto} />
-          </div>
-        ))}
+        </div>
+
+        <div className="col-12 col-md-7">
+          {cargando && <Cargando texto="Cargando categorías..." />}
+          {!cargando && !error && categorias.length === 0 && (
+            <Vacio texto="Todavía no hay categorías registradas." />
+          )}
+          {!cargando && categorias.length > 0 && (
+            <div className="table-responsive">
+              <table className="table table-striped table-hover align-middle tabla-gestion">
+                <thead><tr><th>ID</th><th>Nombre</th><th className="acciones-tabla">Acciones</th></tr></thead>
+                <tbody>
+                  {categorias.map((categoria) => (
+                    <tr key={categoria.id}>
+                      <td>{categoria.id}</td>
+                      <td>{categoria.nombre}</td>
+                      <td className="acciones-tabla">
+                        <div className="d-flex gap-2 flex-wrap">
+                          <button type="button" className="btn btn-sm btn-outline-perla"
+                            onClick={() => empezarEdicion(categoria)}>Editar</button>
+                          <button type="button" className="btn btn-sm btn-outline-danger"
+                            onClick={() => eliminar(categoria)}>Eliminar</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </>
   )
