@@ -9,6 +9,8 @@ import { regiones, comunas } from '../data/zonas.js'
 import { formatearPrecio, validarCantidad, validarCorreo, validarTexto } from '../utils/validaciones.js'
 import { Cargando, ErrorAviso, Vacio } from '../components/Avisos.jsx'
 
+import { filtrarProductos } from '../utils/filtros.js'
+
 const CLIENTE_VACIO = {
   clienteNombre: '', clienteApellidos: '', clienteCorreo: '',
   calle: '', numeroCasa: '', regionId: '', comunaId: '', indicaciones: ''
@@ -23,6 +25,8 @@ export default function NuevaOrden({ publica = false }) {
   const [cliente, setCliente] = useState(CLIENTE_VACIO)
   const [metodoPago, setMetodoPago] = useState(publica ? 'EFECTIVO' : '')
   const [categoria, setCategoria] = useState('')
+  const [busqueda, setBusqueda] = useState('')
+  const [orden, setOrden] = useState('')
   const [checkout, setCheckout] = useState(false)
   const [confirmacion, setConfirmacion] = useState(null)
   const [errores, setErrores] = useState({})
@@ -30,6 +34,7 @@ export default function NuevaOrden({ publica = false }) {
   const [guardando, setGuardando] = useState(false)
 
   const lista = productos || []
+  const visibles = filtrarProductos(lista, { busqueda, categoria, orden })
   const comunasFiltradas = comunas.filter((c) => c.id_region === Number(cliente.regionId))
   const totalEstimado = items.reduce((suma, item) => suma + item.precioUnitario * item.cantidad, 0)
 
@@ -183,13 +188,31 @@ export default function NuevaOrden({ publica = false }) {
       </>}
       {publica && !checkout && !cargando && !error && lista.length > 0 && <section className="mb-4">
         <h2 className="h4 titulo-gestion">Catálogo</h2>
-        <label htmlFor="categoriaTienda" className="form-label">Filtrar por categoría</label>
-        <select id="categoriaTienda" className="form-select mb-3" value={categoria} onChange={(e) => setCategoria(e.target.value)}>
-          <option value="">Todas</option>
-          {[...new Set(lista.map((p) => p.categoria))].map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
+        <div className="row g-2 mb-3">
+          <div className="col-12 col-md-4">
+            <label htmlFor="buscarTienda" className="form-label">Buscar producto</label>
+            <input id="buscarTienda" type="search" className="form-control" placeholder="Nombre del producto" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+          </div>
+          <div className="col-12 col-sm-6 col-md-4">
+            <label htmlFor="categoriaTienda" className="form-label">Filtrar por categoría</label>
+            <select id="categoriaTienda" className="form-select" value={categoria} onChange={(e) => setCategoria(e.target.value)}>
+              <option value="">Todas</option>
+              {[...new Set(lista.map((p) => p.categoria))].map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div className="col-12 col-sm-6 col-md-4">
+            <label htmlFor="ordenPrecio" className="form-label">Ordenar por</label>
+            <select id="ordenPrecio" className="form-select" value={orden} onChange={(e) => setOrden(e.target.value)}>
+              <option value="">Predeterminado</option>
+              <option value="menor">Menor precio</option>
+              <option value="mayor">Mayor precio</option>
+            </select>
+          </div>
+        </div>
+        <p className="small text-muted">{visibles.length} de {lista.length} productos</p>
+        {visibles.length === 0 && <Vacio texto="No se encontraron productos con estos filtros." />}
         <div className="row g-3">
-          {lista.filter((p) => !categoria || p.categoria === categoria).map((p) => (
+          {visibles.map((p) => (
             <div className="col-12 col-sm-6 col-lg-4" key={p.id}>
               <ProductCard producto={p} agregar={agregarProducto} cantidad={items.find((i) => i.productoId === p.id)?.cantidad || 0} />
             </div>

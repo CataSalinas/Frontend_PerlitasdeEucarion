@@ -7,6 +7,8 @@ import { listarCategorias } from '../services/categoriasService.js'
 import { formatearPrecio } from '../utils/validaciones.js'
 import { Cargando, ErrorAviso, Vacio } from '../components/Avisos.jsx'
 
+import { filtrarProductos } from '../utils/filtros.js'
+
 export default function Productos() {
   const { hasRole } = useAuth()
   const ubicacion = useLocation()
@@ -14,14 +16,14 @@ export default function Productos() {
     () => Promise.all([listarProductos(), listarCategorias()]),
     []
   )
-  const [categoria, setCategoria] = useState('Todas')
+  const [categoria, setCategoria] = useState('')
+  const [busqueda, setBusqueda] = useState('')
+  const [stock, setStock] = useState('')
   const [errorAccion, setErrorAccion] = useState('')
 
   const productos = datos ? datos[0] : []
   const categorias = datos ? datos[1] : []
-  const visibles = categoria === 'Todas'
-    ? productos
-    : productos.filter((producto) => producto.categoria === categoria)
+  const visibles = filtrarProductos(productos, { busqueda, categoria, stock })
 
   async function eliminar(id, nombre) {
     if (!window.confirm(`¿Eliminar el producto "${nombre}"? Esta acción no se puede deshacer.`)) return
@@ -56,16 +58,30 @@ export default function Productos() {
 
       <div className="row g-2 mb-3">
         <div className="col-12 col-sm-6 col-md-4">
+          <label htmlFor="buscarProducto" className="form-label small mb-0">Buscar producto</label>
+          <input id="buscarProducto" type="search" className="form-control form-control-sm" placeholder="Nombre del producto" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+        </div>
+        <div className="col-12 col-sm-6 col-md-4">
           <label htmlFor="filtroCategoria" className="form-label small mb-0">Filtrar por categoría</label>
           <select
             id="filtroCategoria" className="form-select form-select-sm"
             value={categoria} onChange={(e) => setCategoria(e.target.value)}
           >
-            <option value="Todas">Todas</option>
+            <option value="">Todas</option>
             {categorias.map((c) => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
           </select>
         </div>
+        <div className="col-12 col-sm-6 col-md-4">
+          <label htmlFor="filtroStock" className="form-label small mb-0">Stock</label>
+          <select id="filtroStock" className="form-select form-select-sm" value={stock} onChange={(e) => setStock(e.target.value)}>
+            <option value="">Todos</option>
+            <option value="disponible">Disponibles</option>
+            <option value="bajo">Stock bajo (1 a 4)</option>
+            <option value="agotado">Agotados</option>
+          </select>
+        </div>
       </div>
+      {!cargando && !error && productos.length > 0 && <p className="small text-muted">{visibles.length} de {productos.length} productos</p>}
 
       {cargando && <Cargando texto="Cargando productos..." />}
       {!cargando && !error && visibles.length === 0 && (

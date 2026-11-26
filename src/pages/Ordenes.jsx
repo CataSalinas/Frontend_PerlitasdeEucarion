@@ -6,6 +6,8 @@ import { listarBoletas, cambiarEstadoBoleta, anularBoleta } from '../services/bo
 import { claseEstado, etiquetaEstado, formatearPrecio } from '../utils/validaciones.js'
 import { Cargando, ErrorAviso, Vacio } from '../components/Avisos.jsx'
 
+import { filtrarOrdenes } from '../utils/filtros.js'
+
 export const ESTADOS = ['PENDIENTE', 'PAGADO', 'EN_PREPARACION', 'ENTREGADO', 'CANCELADO']
 
 export function formatearFecha(fecha) {
@@ -21,7 +23,11 @@ export default function Ordenes() {
   const { datos, cargando, error, recargar } = useRecurso(listarBoletas, [])
   const [errorAccion, setErrorAccion] = useState('')
 
+  const [busqueda, setBusqueda] = useState('')
+  const [estado, setEstado] = useState('')
+  const [orden, setOrden] = useState('recientes')
   const boletas = datos || []
+  const visibles = filtrarOrdenes(boletas, { busqueda, estado, orden })
 
   async function cambiarEstado(id, estado) {
     if (estado === 'CANCELADO' && !window.confirm(`¿Anular la boleta #${id}? Se devolverá el stock.`)) return
@@ -65,12 +71,34 @@ export default function Ordenes() {
       <ErrorAviso error={error} />
       <ErrorAviso error={errorAccion} />
 
+      <div className="row g-2 mb-3 align-items-end">
+        <div className="col-12 col-md-5">
+          <label htmlFor="buscarOrden" className="form-label small mb-0">Buscar orden</label>
+          <input id="buscarOrden" type="search" className="form-control form-control-sm" placeholder="N° de boleta, cliente o correo" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+        </div>
+        <div className="col-6 col-md-3">
+          <label htmlFor="filtroEstado" className="form-label small mb-0">Estado</label>
+          <select id="filtroEstado" className="form-select form-select-sm" value={estado} onChange={(e) => setEstado(e.target.value)}>
+            <option value="">Todos</option>
+            {ESTADOS.map((e) => <option key={e} value={e}>{etiquetaEstado(e)}</option>)}
+          </select>
+        </div>
+        <div className="col-6 col-md-4">
+          <label htmlFor="ordenFecha" className="form-label small mb-0">Ordenar por</label>
+          <select id="ordenFecha" className="form-select form-select-sm" value={orden} onChange={(e) => setOrden(e.target.value)}>
+            <option value="recientes">Más recientes</option>
+            <option value="antiguas">Más antiguas</option>
+          </select>
+        </div>
+      </div>
+      {!cargando && !error && boletas.length > 0 && <p className="small text-muted">{visibles.length} de {boletas.length} órdenes</p>}
+      {!cargando && !error && boletas.length > 0 && visibles.length === 0 && <Vacio texto="No se encontraron órdenes con estos filtros." />}
       {cargando && <Cargando texto="Cargando órdenes..." />}
       {!cargando && !error && boletas.length === 0 && (
         <Vacio texto="No hay órdenes registradas todavía." />
       )}
 
-      {!cargando && boletas.length > 0 && (
+      {!cargando && visibles.length > 0 && (
         <div className="table-responsive">
           <table className="table table-striped table-hover align-middle tabla-gestion">
             <thead>
@@ -80,7 +108,7 @@ export default function Ordenes() {
               </tr>
             </thead>
             <tbody>
-              {boletas.map((boleta) => (
+              {visibles.map((boleta) => (
                 <tr key={boleta.id}>
                   <td>{boleta.id}</td>
                   <td>{formatearFecha(boleta.fecha)}</td>
