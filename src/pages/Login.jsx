@@ -19,7 +19,7 @@ export default function Login() {
   async function manejarEnvio(evento) {
     evento.preventDefault()
     const nuevosErrores = {}
-    if (!validarTexto(datos.correo)) nuevosErrores.correo = 'Debe ingresar su correo.'
+    if (!validarTexto(datos.correo)) nuevosErrores.correo = 'Debe ingresar su usuario o correo.'
     if (!validarTexto(datos.password)) nuevosErrores.password = 'Debe ingresar su contraseña.'
     setErrores(nuevosErrores)
     if (Object.keys(nuevosErrores).length > 0) return
@@ -30,7 +30,7 @@ export default function Login() {
       navigate('/panel', { replace: true })
     } catch (error) {
       if (error.status === 401) {
-        setErrorGeneral('Correo o contraseña incorrectos.')
+        setErrorGeneral('Usuario o contraseña incorrectos.')
       } else if (error.status === 0) {
         setErrorGeneral('No se pudo conectar con el servidor. Intente más tarde.')
       } else {
@@ -56,9 +56,9 @@ export default function Login() {
 
             <form onSubmit={manejarEnvio} noValidate>
               <div className="mb-3">
-                <label htmlFor="correo" className="form-label">Correo</label>
+                <label htmlFor="correo" className="form-label">Usuario o correo</label>
                 <input
-                  id="correo" name="correo" type="email" autoComplete="username"
+                  id="correo" name="correo" type="text" autoComplete="username"
                   className={'form-control' + (errores.correo ? ' is-invalid' : '')}
                   value={datos.correo} onChange={manejarCambio}
                   placeholder="nombre@perlitas.cl"

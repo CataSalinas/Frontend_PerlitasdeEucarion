@@ -168,6 +168,7 @@ function construirUrl(ruta) {
 }
 
 function mensajeDelBackend(respuesta, payload) {
+  if (payload && typeof payload.mensaje === 'string' && payload.mensaje.trim()) return payload.mensaje
   if (payload && typeof payload.message === 'string' && payload.message.trim()) return payload.message
   if (respuesta.status === 401) return 'No autorizado'
   if (respuesta.status === 403) return 'No tiene permisos para realizar esta acción'

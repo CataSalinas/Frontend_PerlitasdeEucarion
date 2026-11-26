@@ -1,21 +1,21 @@
 import { apiFetch } from './api.js'
 
 export function listarUsuarios() {
-  return apiFetch('/usuarios')
+  return apiFetch('/auth/usuarios')
 }
 
 export function obtenerUsuario(id) {
-  return apiFetch(`/usuarios/${id}`)
+  return apiFetch(`/auth/usuarios/${id}`)
 }
 
 export function crearUsuario(datos) {
-  return apiFetch('/usuarios', { method: 'POST', body: datos })
+  return apiFetch('/auth/usuarios', { method: 'POST', body: datos })
 }
 
 export function actualizarUsuario(id, datos) {
-  return apiFetch(`/usuarios/${id}`, { method: 'PUT', body: datos })
+  return apiFetch(`/auth/usuarios/${id}`, { method: 'PUT', body: datos })
 }
 
 export function darBajaUsuario(id) {
-  return apiFetch(`/usuarios/${id}`, { method: 'DELETE' })
+  return apiFetch(`/auth/usuarios/${id}`, { method: 'DELETE' })
 }

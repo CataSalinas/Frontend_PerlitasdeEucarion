@@ -19,6 +19,8 @@ export default function Usuarios() {
   const [errorAccion, setErrorAccion] = useState('')
 
   const usuarios = datos || []
+  const esYo = (usuario) => usuario.id === yo.id || usuario.nombreUsuario === (yo.nombreUsuario || yo.nombre)
+  const esMiId = (id) => usuarios.some((usuario) => usuario.id === id && esYo(usuario))
 
   function empezarEdicion(usuario) {
     setEditandoId(usuario.id)
@@ -43,8 +45,8 @@ export default function Usuarios() {
     if (!validarTexto(nuevo.nombre)) nuevosErrores.nombre = 'Ingrese el nombre.'
     if (!validarTexto(nuevo.apellidos)) nuevosErrores.apellidos = 'Ingrese los apellidos.'
     if (!validarCorreo(nuevo.correo)) nuevosErrores.correo = 'Ingrese un correo válido.'
-    if (!validarTexto(nuevo.password) || nuevo.password.length < 6) {
-      nuevosErrores.password = 'La contraseña debe tener al menos 6 caracteres.'
+    if (!validarTexto(nuevo.password) || nuevo.password.length < 8) {
+      nuevosErrores.password = 'La contraseña debe tener al menos 8 caracteres.'
     }
     setErrores(nuevosErrores)
     if (Object.keys(nuevosErrores).length > 0) return
@@ -68,7 +70,6 @@ export default function Usuarios() {
   async function guardarEdicion(id) {
     const nuevosErrores = {}
     if (!validarTexto(edicion.nombre)) nuevosErrores.nombre = 'Ingrese el nombre.'
-    if (!validarTexto(edicion.apellidos)) nuevosErrores.apellidos = 'Ingrese los apellidos.'
     if (!validarCorreo(edicion.correo)) nuevosErrores.correo = 'Ingrese un correo válido.'
     setErrores(nuevosErrores)
     if (Object.keys(nuevosErrores).length > 0) return
@@ -76,7 +77,7 @@ export default function Usuarios() {
     try {
       setErrorAccion('')
       // El propio usuario nunca puede desactivarse desde la UI (ni el backend lo permite).
-      const activo = id === yo.id ? true : edicion.activo
+      const activo = esMiId(id) ? true : edicion.activo
       await actualizarUsuario(id, {
         nombre: edicion.nombre.trim(),
         apellidos: edicion.apellidos.trim(),
@@ -92,7 +93,7 @@ export default function Usuarios() {
   }
 
   async function darBaja(usuario) {
-    if (usuario.id === yo.id) return
+    if (esYo(usuario)) return
     if (!window.confirm(`¿Dar de baja al usuario ${usuario.nombre} ${usuario.apellidos}?`)) return
     try {
       setErrorAccion('')
@@ -181,7 +182,7 @@ export default function Usuarios() {
                               value={edicion.correo} onChange={(e) => setEdicion({ ...edicion, correo: e.target.value })} />
                           </td>
                           <td>
-                            <select className="form-select form-select-sm" aria-label="Rol"
+                            <select className="form-select form-select-sm" aria-label="Rol" disabled={esYo(usuario)}
                               value={edicion.rol} onChange={(e) => setEdicion({ ...edicion, rol: e.target.value })}>
                               <option value="VENDEDOR">VENDEDOR</option>
                               <option value="ADMIN">ADMIN</option>
@@ -190,8 +191,8 @@ export default function Usuarios() {
                           <td>
                             <div className="form-check">
                               <input className="form-check-input" id={`activo-${usuario.id}`} type="checkbox"
-                                checked={usuario.id === yo.id ? true : edicion.activo}
-                                disabled={usuario.id === yo.id}
+                                checked={esYo(usuario) ? true : edicion.activo}
+                                disabled={esYo(usuario)}
                                 onChange={(e) => setEdicion({ ...edicion, activo: e.target.checked })} />
                             </div>
                           </td>
@@ -208,7 +209,7 @@ export default function Usuarios() {
                           <td>{usuario.id}</td>
                           <td>
                             {usuario.nombre} {usuario.apellidos}
-                            {usuario.id === yo.id && <span className="badge bg-perla ms-2">Usted</span>}
+                            {esYo(usuario) && <span className="badge bg-perla ms-2">Usted</span>}
                           </td>
                           <td>{usuario.correo}</td>
                           <td>{usuario.rol}</td>
@@ -222,8 +223,8 @@ export default function Usuarios() {
                               <button type="button" className="btn btn-sm btn-outline-perla"
                                 onClick={() => empezarEdicion(usuario)}>Editar</button>
                               <button type="button" className="btn btn-sm btn-outline-danger"
-                                disabled={usuario.id === yo.id}
-                                title={usuario.id === yo.id ? 'No puede dar de baja su propio usuario' : ''}
+                                disabled={esYo(usuario)}
+                                title={esYo(usuario) ? 'No puede dar de baja su propio usuario' : ''}
                                 onClick={() => darBaja(usuario)}>Dar de baja</button>
                             </div>
                           </td>
