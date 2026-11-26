@@ -41,7 +41,6 @@ export default function Productos() {
           <h1 className="h3 titulo-gestion mb-1">Productos</h1>
           <p className="text-muted mb-0">Listado y detalle del catálogo de bisutería.</p>
         </div>
-        {/* VENDEDOR: solo lectura. El backend también rechaza escrituras con 403. */}
         {hasRole('ADMIN') && (
           <Link className="btn btn-perla" to="/productos/nuevo">
             <i className="bi bi-plus-lg me-1"></i>Nuevo producto

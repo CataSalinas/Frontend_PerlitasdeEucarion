@@ -4,9 +4,6 @@ export function listarUsuarios() {
   return apiFetch('/auth/usuarios')
 }
 
-export function obtenerUsuario(id) {
-  return apiFetch(`/auth/usuarios/${id}`)
-}
 
 export function crearUsuario(datos) {
   return apiFetch('/auth/usuarios', { method: 'POST', body: datos })

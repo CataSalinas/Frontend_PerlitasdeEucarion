@@ -1,12 +1,5 @@
 import { API_URL } from '../config.js'
 
-/**
- * Capa de transporte hacia la API REST.
- * - Antepone VITE_API_URL.
- * - Agrega el header Authorization: Bearer <accessToken>.
- * - Si recibe 401 en una petición autenticada, finaliza la sesión.
- * - Normaliza los errores del backend usando el campo `message`.
- */
 export const CLAVES_SESION = {
   accessToken: 'perlitas_accessToken',
   refreshToken: 'perlitas_refreshToken',
@@ -24,10 +17,6 @@ export class ApiError extends Error {
     this.payload = payload
   }
 }
-
-// ---------------------------------------------------------------------------
-// Suscripciones: permiten que AuthContext reaccione a cambios de la capa API
-// ---------------------------------------------------------------------------
 
 export function suscribirSesion(funcion) {
   oyentesSesion.add(funcion)
@@ -51,10 +40,6 @@ function cerrarSesionForzada() {
     try { window.location.assign('/login') } catch { /* jsdom no implementa navegación */ }
   }
 }
-
-// ---------------------------------------------------------------------------
-// Persistencia de sesión (localStorage)
-// ---------------------------------------------------------------------------
 
 export function leerSesion() {
   try {
@@ -81,9 +66,7 @@ export function limpiarSesion() {
   notificarSesion()
 }
 
-// ---------------------------------------------------------------------------
-// JWT: lectura del claim `exp` (sin verificar firma; eso lo hace el backend)
-// ---------------------------------------------------------------------------
+// La firma del JWT se valida en el backend.
 
 export function decodificarJwt(token) {
   try {
@@ -107,10 +90,6 @@ export function tokenExpirado(token, ahora = Date.now()) {
   return exp !== null && exp * 1000 <= ahora
 }
 
-// ---------------------------------------------------------------------------
-// petición genérica
-// ---------------------------------------------------------------------------
-
 function construirUrl(ruta) {
   if (/^https?:\/\//i.test(ruta)) return ruta
   return `${API_URL}${ruta.startsWith('/') ? ruta : `/${ruta}`}`
@@ -125,10 +104,6 @@ function mensajeDelBackend(respuesta, payload) {
   return `Error del servidor (${respuesta.status})`
 }
 
-/**
- * @param {string} ruta ruta relativa a VITE_API_URL
- * @param {object} opciones { method, body, auth = true, signal }
- */
 export async function apiFetch(ruta, opciones = {}) {
   const { method = 'GET', body, auth = true, signal, texto = false } = opciones
   const sesion = leerSesion()
@@ -172,4 +147,3 @@ export async function apiFetch(ruta, opciones = {}) {
   }
 }
 
-export default apiFetch

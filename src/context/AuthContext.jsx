@@ -13,16 +13,6 @@ import {
 
 const AuthContext = createContext(null)
 
-/**
- * Sesión de la aplicación.
- *
- * Decisión: tokens y usuario en localStorage (prefijo `perlitas_`).
- * Ventaja: la sesión sobrevive a recargas y a pestañas nuevas.
- * Trade-off: localStorage es legible por JS, por lo que un XSS podría robar el token.
- * Una cookie HttpOnly + SameSite sería más segura, pero no la puede leer el frontend
- * y complicaría el contrato con el backend. Por eso se valida todo en el backend
- * (401/403) y el rol del frontend solo oculta controles, nunca autoriza operaciones.
- */
 export function AuthProvider({ children }) {
   const navigate = useNavigate()
   // Inicialización síncrona: evita el parpadeo de "/login" al recargar con sesión válida.

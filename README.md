@@ -1,10 +1,9 @@
 # Perlitas de Eucarión — Frontend
 
-SPA de **tienda pública y gestión interna** construida con React + Vite + Bootstrap. Administra productos, categorías, órdenes/boletas y usuarios del personal consumiendo la API REST real de Spring Boot. Incluye catálogo, carrito y compra sin registro, con pago al recibir. La integración de la tienda está pendiente de validación final en ejecución.
+SPA de **tienda pública y gestión interna** construida con React + Vite + Bootstrap. Administra productos, categorías, órdenes/boletas y usuarios del personal consumiendo la API REST real de Spring Boot. Incluye catálogo, carrito y compra sin registro, con pago al recibir. Se verificó el registro de una compra como invitado y su resumen, con persistencia en el sistema administrativo.
 
 - Repositorio: https://github.com/CataSalinas/Frontend_PerlitasdeEucarion
 - Backend real: https://github.com/Yulianacalvucura/Backend-Perlitas-de-Eucarion, disponible en `http://localhost:9090/api/v1`.
-- Desarrollo anterior: `mock-server/` (Express), conservado como referencia histórica. No representa el contrato actual del backend y no se utiliza en la integración real.
 - Acceso público para clientes sin cuenta y acceso del personal con roles `ADMIN` y `VENDEDOR`.
 
 Proyecto de la asignatura DSY1104 Desarrollo Fullstack II. Integrantes: Yuliana Calvucura, Francisco Riveros y Catalina Salinas.
@@ -50,7 +49,7 @@ El archivo `.env` debe contener:
 VITE_API_URL=/api/v1
 ```
 
-Vite utiliza un proxy hacia `http://localhost:9090` y conserva el prefijo `/api/v1`. No iniciar el mock-server.
+Vite utiliza un proxy hacia `http://localhost:9090` y conserva el prefijo `/api/v1`.
 
 Abrir `http://localhost:5173`. La página principal abre `/tienda`. Desde «Acceso del personal» se ingresa a `/login` o al panel si hay sesión.
 
@@ -72,23 +71,22 @@ Las cuentas nuevas del personal pueden iniciar sesión con su correo registrado.
 | `npm run dev` | Servidor de desarrollo Vite. |
 | `npm run build` | Empaquetado de producción en `dist/`. |
 | `npm run preview` | Servir el `dist/` generado. |
-| `npm run mock` | Levantar el mock histórico; no se usa para validar la integración real. |
 | `npm test` | Jasmine + Karma con launcher `jsdom` y reporte de cobertura en `coverage/html`. |
 | `npm run test:watch` | Modo observador. |
 | `npm run test:chrome` | Igual que `npm test` pero con ChromeHeadless (requiere Chrome instalado). |
 
-Antes de incorporar la tienda había **39 pruebas** en 8 archivos de especificación: capa API, sesión persistente y expiración, rutas por rol, navbar, login, productos, órdenes y validaciones. Las pruebas usan respuestas simuladas de `fetch` adaptadas al contrato real; no sustituyen las pruebas manuales contra Spring Boot.
+Las pruebas con Jasmine y Karma simulan las respuestas de `fetch` según el contrato REST real. No requieren un servidor mock independiente ni sustituyen las pruebas de integración manuales.
 
-Última ejecución verificada (25-11-2026): **39 de 39 pruebas exitosas**.
+Cobertura registrada el 26-11-2026, antes de la limpieza:
 
 | Métrica | Cobertura |
 | --- | ---: |
-| Statements | 74,57 % |
-| Branches | 70,43 % |
-| Functions | 75,00 % |
-| Lines | 76,71 % |
+| Statements | 70,66 % |
+| Branches | 65,56 % |
+| Functions | 70,54 % |
+| Lines | 74,50 % |
 
-La cobertura corresponde a la ejecución anterior y a los archivos incluidos en el reporte de Karma. Se añadieron 3 pruebas de tienda (servicio REST y flujo de compra); ejecutar `npm test` para actualizar los resultados.
+Ejecutar `npm test` para obtener el total de pruebas exitosas y la cobertura actualizada.
 
 ## Rutas
 
@@ -118,7 +116,7 @@ src/
   context/AuthContext.jsx   sesión persistente, expiración, logout, sync entre pestañas
   services/
     api.js                  fetch + Authorization + manejo de errores y cierre de sesión
-    authService.js          login / logout / perfil
+    authService.js          login / logout
     productosService.js     /productos y /categorias/relaciones
     categoriasService.js    /categorias
     boletasService.js       /ventas
@@ -128,9 +126,7 @@ src/
   components/               Navbar por rol, RutaProtegida, avisos, footer
   pages/                    pantallas de gestión y tienda pública
   utils/validaciones.js     validaciones y formato de precios/estados
-mock-server/                mock histórico (no usado en integración real)
 test/                       pruebas Jasmine + Karma
-docs/                       manual, integración y guía de presentación
 ```
 
 ## Sesión y seguridad (trade-off)
@@ -145,7 +141,7 @@ Se guardan `accessToken` y el objeto `usuario` en `localStorage` con prefijo `pe
 - Cerrar sesión en una pestaña se sincroniza con las demás mediante el evento `storage`.
 - El Gateway comprueba la cuenta activa y el rol actual en las peticiones protegidas.
 
-`.env` y `node_modules/` están ignorados por Git. El mock y el backend incluyen configuraciones de desarrollo que no deben utilizarse para producción.
+`.env` y `node_modules/` están ignorados por Git. El backend incluye configuraciones de desarrollo que no deben utilizarse para producción.
 
 ## Integración y alcance actual
 
@@ -155,16 +151,13 @@ Se guardan `accessToken` y el objeto `usuario` en `localStorage` con prefijo `pe
 - El personal se gestiona a través de `/api/v1/auth/usuarios`.
 - Se comprobaron manualmente el login de ambos roles, categorías, CRUD de productos, registro de venta, detalle de orden, descuento y devolución de stock, y la pantalla de acceso denegado del vendedor.
 
-- La tienda usa `GET /api/v1/productos/tienda`, `GET /api/v1/categorias/tienda` y `POST /api/v1/ventas/compra` sin JWT. La compra queda `PENDIENTE` con pago en efectivo al recibir. El servidor valida stock y precios.
+- La tienda usa `GET /api/v1/productos/tienda`, `GET /api/v1/categorias/tienda` y `POST /api/v1/ventas/compra` sin JWT. La compra queda `PENDIENTE` con pago en efectivo al recibir. El servidor valida stock y precios, y devuelve un resumen con productos, cantidades, precios unitarios y total.
 
-Pendiente: verificar la compra pública contra el backend real y sus permisos, comprobar edición/baja de usuarios y sesiones previas, confirmar con el docente que la compra sin cuenta satisface el rol cliente, y finalizar los documentos de entrega.
+Se comprobó la compra pública y la visualización de su detalle desde administración. Queda comprobar edición/baja de usuarios y sesiones previas, confirmar con el docente el alcance del cliente invitado y finalizar los documentos de entrega.
 
-## Decisiones y documentación
+## Documentación
 
-- [`ASSUMPTIONS.md`](ASSUMPTIONS.md): decisiones ante ambigüedades.
-- [`docs/Manual_de_Usuario.md`](docs/Manual_de_Usuario.md): uso paso a paso por rol.
-- [`docs/Documento_Integracion_Frontend.md`](docs/Documento_Integracion_Frontend.md): contrato REST, autenticación y permisos.
-- [`docs/Guia_Presentacion.md`](docs/Guia_Presentacion.md): guion de demostración y preguntas frecuentes.
-- [`CHECKLIST_RUBRICA.md`](CHECKLIST_RUBRICA.md): verificación final de la entrega.
+- [`INTEGRACION_LOCAL.md`](INTEGRACION_LOCAL.md): ejecución e integración local.
+- Entrega: ERS, manual de usuario, documentación de APIs y documento de APIs e integración.
 
-Los commits documentan los cambios de integración, correcciones y pruebas. Los documentos Markdown anteriores son material de apoyo y deben actualizarse con el contrato REST real y las capturas finales antes de la entrega.
+Los commits documentan los cambios del proyecto. Los borradores del contrato simulado se archivaron fuera del repositorio, ya que no describen la API actual.

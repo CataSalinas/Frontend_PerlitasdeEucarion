@@ -59,8 +59,6 @@ export default function DetalleOrden() {
       </div>
 
       <ErrorAviso error={errorAccion} />
-
-      {/* Los controles de estado solo existen en el DOM para ADMIN. */}
       {hasRole('ADMIN') && (
         <div className="card mb-4">
           <div className="card-body d-flex flex-wrap gap-2 align-items-center">

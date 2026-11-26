@@ -17,7 +17,3 @@ export async function login(usuario, password) {
 export function logout() {
   limpiarSesion()
 }
-
-export function obtenerPerfil() {
-  return apiFetch('/auth/me')
-}

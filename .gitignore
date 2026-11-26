@@ -7,8 +7,6 @@ coverage/
 .env
 .env.*
 !.env.example
-mock-server/.env
-mock-server/.env.*
 
 # Sistema operativo / editores / logs
 .DS_Store

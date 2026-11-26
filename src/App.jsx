@@ -2,7 +2,6 @@ import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Navbar from './components/Navbar.jsx'
 import Footer from './components/Footer.jsx'
 import RutaProtegida from './components/RutaProtegida.jsx'
-import { Cargando } from './components/Avisos.jsx'
 import { useAuth } from './context/AuthContext.jsx'
 import Login from './pages/Login.jsx'
 import Panel from './pages/Panel.jsx'
@@ -25,7 +24,6 @@ export default function App() {
   const { pathname } = useLocation()
   const esTienda = pathname === "/" || pathname === "/tienda"
 
-  // Evita el parpadeo hacia /login mientras se restaura la sesión desde localStorage.
   if (cargando) {
     return (
       <div className="container py-5 text-center" role="status">

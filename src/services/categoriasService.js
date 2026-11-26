@@ -4,9 +4,6 @@ export function listarCategorias() {
   return apiFetch('/categorias')
 }
 
-export function obtenerCategoria(id) {
-  return apiFetch(`/categorias/${id}`)
-}
 
 export function crearCategoria(nombre) {
   return apiFetch('/categorias', { method: 'POST', body: { nombre } })

@@ -76,7 +76,6 @@ export default function Usuarios() {
 
     try {
       setErrorAccion('')
-      // El propio usuario nunca puede desactivarse desde la UI (ni el backend lo permite).
       const activo = esMiId(id) ? true : edicion.activo
       await actualizarUsuario(id, {
         nombre: edicion.nombre.trim(),

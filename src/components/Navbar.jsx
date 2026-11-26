@@ -1,7 +1,6 @@
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 
-// Cada enlace declara los roles que pueden verlo. El backend sigue siendo quien autoriza.
 const ENLACES = [
   { to: '/panel', texto: 'Panel', icono: 'bi-speedometer2', roles: ['ADMIN', 'VENDEDOR'] },
   { to: '/productos', texto: 'Productos', icono: 'bi-box-seam', roles: ['ADMIN', 'VENDEDOR'] },

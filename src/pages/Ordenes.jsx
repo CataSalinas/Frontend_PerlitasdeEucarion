@@ -95,7 +95,6 @@ export default function Ordenes() {
                   <td className="acciones-tabla">
                     <div className="d-flex gap-2 flex-wrap align-items-center">
                       <Link className="btn btn-sm btn-outline-perla" to={`/ordenes/${boleta.id}`}>Ver</Link>
-                      {/* VENDEDOR never ve controles de escritura: solo ADMIN puede cambiar estado/anular. */}
                       {hasRole('ADMIN') && (
                         <>
                           <select

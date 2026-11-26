@@ -14,11 +14,7 @@ const CLIENTE_VACIO = {
   calle: '', numeroCasa: '', regionId: '', comunaId: '', indicaciones: ''
 }
 
-/**
- * Formulario compartido: venta interna del ADMIN o compra pública sin cuenta.
- * Valida productos y cantidades; el total definitivo
- * lo calcula el servidor (aquí solo se muestra un estimado).
- */
+// Formulario compartido para venta interna y compra pública; el servidor calcula el total.
 export default function NuevaOrden({ publica = false }) {
   const navigate = useNavigate()
   const { datos: productos, cargando, error, recargar } = useRecurso(publica ? listarTienda : listarProductos, [publica])
