@@ -1,21 +1,32 @@
-  import { apiFetch } from './api.js'
+import { apiFetch } from './api.js'
 
-export function listarBoletas() {
-  return apiFetch('/ventas')
+function adaptarVenta(venta) {
+  return {
+    ...venta,
+    detalles: (venta.productos || []).map((producto) => ({
+      ...producto,
+      productoNombre: producto.datosProducto?.nombre || `Producto #${producto.productoId}`
+    }))
+  }
 }
 
-export function obtenerBoleta(id) {
-  return apiFetch(`/boletas/${id}`)
+export async function listarBoletas() {
+  const ventas = await apiFetch('/ventas')
+  return ventas.map(adaptarVenta)
 }
 
-export function crearBoleta(datos) {
-  return apiFetch('/boletas', { method: 'POST', body: datos })
+export async function obtenerBoleta(id) {
+  return adaptarVenta(await apiFetch(`/ventas/${id}`))
+}
+
+export async function crearBoleta(datos) {
+  return adaptarVenta(await apiFetch('/ventas/registro', { method: 'POST', body: datos }))
 }
 
 export function cambiarEstadoBoleta(id, estado) {
-  return apiFetch(`/boletas/${id}/estado`, { method: 'PUT', body: { estado } })
+  return apiFetch(`/ventas/${id}/estado`, { method: 'PUT', body: { estado } })
 }
 
 export function anularBoleta(id) {
-  return apiFetch(`/boletas/${id}`, { method: 'DELETE' })
+  return apiFetch(`/ventas/${id}`, { method: 'DELETE' })
 }

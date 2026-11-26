@@ -23,6 +23,7 @@ export default function NuevaOrden() {
   const [seleccion, setSeleccion] = useState({ productoId: '', cantidad: '1' })
   const [items, setItems] = useState([])
   const [cliente, setCliente] = useState(CLIENTE_VACIO)
+  const [metodoPago, setMetodoPago] = useState('')
   const [errores, setErrores] = useState({})
   const [errorAccion, setErrorAccion] = useState('')
   const [guardando, setGuardando] = useState(false)
@@ -63,6 +64,7 @@ export default function NuevaOrden() {
       }])
     }
     setSeleccion({ productoId: '', cantidad: '1' })
+    setErrores((anteriores) => ({ ...anteriores, items: '' }))
   }
 
   function cambiarCantidad(productoId, valor) {
@@ -95,6 +97,7 @@ export default function NuevaOrden() {
     if (!validarTexto(cliente.numeroCasa)) nuevos.numeroCasa = 'Ingrese el número.'
     if (!cliente.regionId) nuevos.regionId = 'Seleccione una región.'
     if (!cliente.comunaId) nuevos.comunaId = 'Seleccione una comuna.'
+    if (!metodoPago) nuevos.metodoPago = 'Seleccione un método de pago.'
     setErrores(nuevos)
     if (Object.keys(nuevos).length > 0) return
 
@@ -107,6 +110,7 @@ export default function NuevaOrden() {
       regionId: Number(cliente.regionId),
       comunaId: Number(cliente.comunaId),
       indicaciones: (cliente.indicaciones || '').trim(),
+      metodoPago,
       items: items.map((item) => ({ productoId: item.productoId, cantidad: item.cantidad }))
     }
 
@@ -260,6 +264,20 @@ export default function NuevaOrden() {
                     value={cliente.indicaciones} onChange={manejarCliente} />
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div className="card mb-4">
+            <div className="card-body">
+              <label htmlFor="metodoPago" className="form-label">Método de pago</label>
+              <select id="metodoPago" className="form-select" value={metodoPago}
+                onChange={(e) => setMetodoPago(e.target.value)}>
+                <option value="">Seleccione un método de pago</option>
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TARJETA">Tarjeta</option>
+                <option value="TRANSFERENCIA">Transferencia</option>
+              </select>
+              {errores.metodoPago && <div className="mensaje-error">{errores.metodoPago}</div>}
             </div>
           </div>
 

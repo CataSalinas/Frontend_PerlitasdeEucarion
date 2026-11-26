@@ -10,6 +10,7 @@ export const ESTADOS = ['PAGADO', 'EN_PREPARACION', 'ENTREGADO', 'CANCELADO']
 
 export function formatearFecha(fecha) {
   if (!fecha) return '-'
+  if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return fecha.split('-').reverse().join('-')
   const fechaObjeto = new Date(fecha)
   return Number.isNaN(fechaObjeto.getTime()) ? fecha : fechaObjeto.toLocaleString('es-CL')
 }
@@ -23,6 +24,7 @@ export default function Ordenes() {
   const boletas = datos || []
 
   async function cambiarEstado(id, estado) {
+    if (estado === 'CANCELADO' && !window.confirm(`¿Anular la boleta #${id}? Se devolverá el stock.`)) return
     try {
       setErrorAccion('')
       await cambiarEstadoBoleta(id, estado)
@@ -100,6 +102,7 @@ export default function Ordenes() {
                             aria-label={`Cambiar estado de la boleta ${boleta.id}`}
                             className="form-select form-select-sm" style={{ width: '150px' }}
                             value={boleta.estado}
+                            disabled={boleta.estado === 'CANCELADO'}
                             onChange={(e) => cambiarEstado(boleta.id, e.target.value)}
                           >
                             {ESTADOS.map((estado) => (

@@ -21,6 +21,7 @@ export default function DetalleOrden() {
   const [errorAccion, setErrorAccion] = useState('')
 
   async function cambiarEstado(estado) {
+    if (estado === 'CANCELADO' && !window.confirm(`¿Anular la boleta #${id}? Se devolverá el stock.`)) return
     try {
       setErrorAccion('')
       await cambiarEstadoBoleta(id, estado)
@@ -51,7 +52,7 @@ export default function DetalleOrden() {
         <div>
           <h1 className="h3 titulo-gestion mb-1">Boleta #{boleta.id}</h1>
           <p className="text-muted mb-0">
-            Fecha: {new Date(boleta.fecha).toLocaleString('es-CL')} · Vendida por: {boleta.usuarioNombre}
+            Fecha: {boleta.fecha && /^\d{4}-\d{2}-\d{2}$/.test(boleta.fecha) ? boleta.fecha.split('-').reverse().join('-') : new Date(boleta.fecha).toLocaleString('es-CL')} · Vendida por: {boleta.usuarioNombre}
           </p>
         </div>
         <span className={'badge ' + claseEstado(boleta.estado)}>{etiquetaEstado(boleta.estado)}</span>
@@ -65,7 +66,7 @@ export default function DetalleOrden() {
           <div className="card-body d-flex flex-wrap gap-2 align-items-center">
             <label htmlFor="estadoBoleta" className="form-label mb-0">Cambiar estado:</label>
             <select id="estadoBoleta" className="form-select form-select-sm" style={{ width: '190px' }}
-              value={boleta.estado} onChange={(e) => cambiarEstado(e.target.value)}>
+              value={boleta.estado} disabled={boleta.estado === 'CANCELADO'} onChange={(e) => cambiarEstado(e.target.value)}>
               {ESTADOS.map((estado) => (
                 <option key={estado} value={estado}>{etiquetaEstado(estado)}</option>
               ))}
