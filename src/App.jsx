@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Navbar from './components/Navbar.jsx'
 import Footer from './components/Footer.jsx'
 import RutaProtegida from './components/RutaProtegida.jsx'
@@ -22,6 +22,8 @@ const SOLO_ADMIN = ['ADMIN']
 
 export default function App() {
   const { cargando, isAuthenticated } = useAuth()
+  const { pathname } = useLocation()
+  const esTienda = pathname === "/" || pathname === "/tienda"
 
   // Evita el parpadeo hacia /login mientras se restaura la sesión desde localStorage.
   if (cargando) {
@@ -35,10 +37,16 @@ export default function App() {
 
   return (
     <>
-      {isAuthenticated && <Navbar />}
+      {esTienda ? <nav className="navbar bg-perla-suave border-bottom">
+        <div className="container d-flex gap-2 flex-wrap">
+          <Link className="navbar-brand fw-bold" to="/tienda"><i className="bi bi-gem me-2"></i>Perlitas de Eucarión</Link>
+          <Link className="btn btn-outline-perla btn-sm" to={isAuthenticated ? '/panel' : '/login'}>Acceso del personal</Link>
+        </div>
+      </nav> : isAuthenticated && <Navbar />}
       <main className="container py-4">
         <Routes>
-          <Route path="/" element={<Navigate to="/panel" replace />} />
+          <Route path="/" element={<Navigate to="/tienda" replace />} />
+          <Route path="/tienda" element={<NuevaOrden key="tienda" publica />} />
           <Route path="/login" element={isAuthenticated ? <Navigate to="/panel" replace /> : <Login />} />
 
           <Route element={<RutaProtegida roles={TODOS} />}>
@@ -53,7 +61,7 @@ export default function App() {
             <Route path="/productos/nuevo" element={<FormularioProducto />} />
             <Route path="/productos/:id/editar" element={<FormularioProducto />} />
             <Route path="/categorias" element={<Categorias />} />
-            <Route path="/ordenes/nueva" element={<NuevaOrden />} />
+            <Route path="/ordenes/nueva" element={<NuevaOrden key="gestion" />} />
             <Route path="/usuarios" element={<Usuarios />} />
           </Route>
 
@@ -61,7 +69,7 @@ export default function App() {
           <Route path="*" element={<NoEncontrado />} />
         </Routes>
       </main>
-      {isAuthenticated && <Footer />}
+      {(isAuthenticated || esTienda) && <Footer />}
     </>
   )
 }

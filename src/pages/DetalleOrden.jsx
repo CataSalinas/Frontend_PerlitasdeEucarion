@@ -7,7 +7,7 @@ import { regiones, comunas } from '../data/zonas.js'
 import { claseEstado, etiquetaEstado, formatearPrecio } from '../utils/validaciones.js'
 import { Cargando, ErrorAviso } from '../components/Avisos.jsx'
 
-const ESTADOS = ['PAGADO', 'EN_PREPARACION', 'ENTREGADO', 'CANCELADO']
+const ESTADOS = ['PENDIENTE', 'PAGADO', 'EN_PREPARACION', 'ENTREGADO', 'CANCELADO']
 
 function nombreZona(lista, id) {
   const encontrado = lista.find((item) => item.id === Number(id))

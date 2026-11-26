@@ -26,6 +26,7 @@ export function formatearPrecio(valor) {
 }
 
 const ETIQUETAS_ESTADO = {
+  PENDIENTE: 'Pendiente de pago',
   PAGADO: 'Pagado',
   EN_PREPARACION: 'En preparación',
   ENTREGADO: 'Entregado',
@@ -37,6 +38,7 @@ export function etiquetaEstado(estado) {
 }
 
 export function claseEstado(estado) {
+  if (estado === 'PENDIENTE') return 'bg-warning text-dark'
   if (estado === 'PAGADO') return 'bg-perla'
   if (estado === 'EN_PREPARACION') return 'bg-warning text-dark'
   if (estado === 'ENTREGADO') return 'bg-success'

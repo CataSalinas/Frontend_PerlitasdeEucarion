@@ -1,30 +1,31 @@
-# Perlitas de Eucarión — Frontend de gestión interna
+# Perlitas de Eucarión — Frontend
 
-SPA de **gestión interna** construida con React + Vite + Bootstrap. Administra productos, categorías, órdenes/boletas y usuarios del personal consumiendo la API REST real de Spring Boot. La tienda pública para clientes sin cuenta todavía está pendiente.
+SPA de **tienda pública y gestión interna** construida con React + Vite + Bootstrap. Administra productos, categorías, órdenes/boletas y usuarios del personal consumiendo la API REST real de Spring Boot. Incluye catálogo, carrito y compra sin registro, con pago al recibir. La integración de la tienda está pendiente de validación final en ejecución.
 
 - Repositorio: https://github.com/CataSalinas/Frontend_PerlitasdeEucarion
 - Backend real: https://github.com/Yulianacalvucura/Backend-Perlitas-de-Eucarion, disponible en `http://localhost:9090/api/v1`.
 - Desarrollo anterior: `mock-server/` (Express), conservado como referencia histórica. No representa el contrato actual del backend y no se utiliza en la integración real.
-- Acceso actual: personal autorizado, con roles `ADMIN` y `VENDEDOR`. Se propone incorporar la tienda pública sin registro de clientes.
+- Acceso público para clientes sin cuenta y acceso del personal con roles `ADMIN` y `VENDEDOR`.
 
 Proyecto de la asignatura DSY1104 Desarrollo Fullstack II. Integrantes: Yuliana Calvucura, Francisco Riveros y Catalina Salinas.
 
 ## Roles
 
-| Acción | ADMIN | VENDEDOR |
-| --- | --- | --- |
-| Ingresar, ver panel, listar productos y órdenes | Sí | Sí |
-| Ver detalle de productos y boletas | Sí | Sí |
-| Crear / editar / eliminar productos | Sí | No |
-| Gestionar categorías | Sí | No |
-| Registrar ventas, cambiar estados, anular boletas | Sí | No |
-| Crear / editar / dar de baja usuarios | Sí | No |
+| Acción | ADMIN | VENDEDOR | CLIENTE (invitado) |
+| --- | --- | --- | --- |
+| Acceder a tienda y comprar sin registro | Sí | Sí | Sí |
+| Ingresar, ver panel, listar productos y órdenes | Sí | Sí | No |
+| Ver detalle de productos y boletas internas | Sí | Sí | No |
+| Crear / editar / eliminar productos | Sí | No | No |
+| Gestionar categorías | Sí | No | No |
+| Registrar ventas, cambiar estados, anular boletas | Sí | No | No |
+| Crear / editar / dar de baja usuarios | Sí | No | No |
 
 La interfaz oculta los controles no permitidos, pero **la autoridad es el backend**: las operaciones administrativas están restringidas por el Gateway y Spring Security. Se comprobó que una petición `PUT` de productos con JWT de vendedor devuelve `403`.
 
 ## Requisitos
 
-- Node.js 18 o superior y npm.
+- Node.js 24 (versión utilizada en las pruebas del equipo) y npm.
 - Backend Spring Boot iniciado, Gateway en `http://localhost:9090/api/v1` y MySQL/MariaDB activo (ver README del backend).
 
 ## Puesta en marcha
@@ -51,7 +52,7 @@ VITE_API_URL=/api/v1
 
 Vite utiliza un proxy hacia `http://localhost:9090` y conserva el prefijo `/api/v1`. No iniciar el mock-server.
 
-Abrir `http://localhost:5173`. En esta versión la página principal redirige a `/panel` o `/login` si no hay sesión.
+Abrir `http://localhost:5173`. La página principal abre `/tienda`. Desde «Acceso del personal» se ingresa a `/login` o al panel si hay sesión.
 
 Usuarios de desarrollo inicializados por el backend:
 
@@ -76,7 +77,7 @@ Las cuentas nuevas del personal pueden iniciar sesión con su correo registrado.
 | `npm run test:watch` | Modo observador. |
 | `npm run test:chrome` | Igual que `npm test` pero con ChromeHeadless (requiere Chrome instalado). |
 
-Hay **39 pruebas** en 8 archivos de especificación: capa API, sesión persistente y expiración, rutas por rol, navbar, login, productos, órdenes y validaciones. Las pruebas usan respuestas simuladas de `fetch` adaptadas al contrato real; no sustituyen las pruebas manuales contra Spring Boot.
+Antes de incorporar la tienda había **39 pruebas** en 8 archivos de especificación: capa API, sesión persistente y expiración, rutas por rol, navbar, login, productos, órdenes y validaciones. Las pruebas usan respuestas simuladas de `fetch` adaptadas al contrato real; no sustituyen las pruebas manuales contra Spring Boot.
 
 Última ejecución verificada (25-11-2026): **39 de 39 pruebas exitosas**.
 
@@ -87,12 +88,13 @@ Hay **39 pruebas** en 8 archivos de especificación: capa API, sesión persisten
 | Functions | 75,00 % |
 | Lines | 76,71 % |
 
-La cobertura corresponde a los archivos incluidos en el reporte de Karma.
+La cobertura corresponde a la ejecución anterior y a los archivos incluidos en el reporte de Karma. Se añadieron 3 pruebas de tienda (servicio REST y flujo de compra); ejecutar `npm test` para actualizar los resultados.
 
 ## Rutas
 
 | Ruta | Acceso | Pantalla |
 | --- | --- | --- |
+| `/`, `/tienda` | Público | Catálogo, carrito y checkout sin registro |
 | `/login` | Público (redirige a `/panel` si hay sesión) | Ingreso |
 | `/panel` | ADMIN, VENDEDOR | Resumen: productos, órdenes y stock bajo |
 | `/productos`, `/productos/:id` | ADMIN, VENDEDOR | Listado con filtro y detalle |
@@ -121,9 +123,10 @@ src/
     categoriasService.js    /categorias
     boletasService.js       /ventas
     usuariosService.js      /auth/usuarios
+    tiendaService.js        catálogo y compra pública
   hooks/useRecurso.js       carga con estados carga/error/recarga
   components/               Navbar por rol, RutaProtegida, avisos, footer
-  pages/                    pantallas de gestión
+  pages/                    pantallas de gestión y tienda pública
   utils/validaciones.js     validaciones y formato de precios/estados
 mock-server/                mock histórico (no usado en integración real)
 test/                       pruebas Jasmine + Karma
@@ -152,7 +155,9 @@ Se guardan `accessToken` y el objeto `usuario` en `localStorage` con prefijo `pe
 - El personal se gestiona a través de `/api/v1/auth/usuarios`.
 - Se comprobaron manualmente el login de ambos roles, categorías, CRUD de productos, registro de venta, detalle de orden, descuento y devolución de stock, y la pantalla de acceso denegado del vendedor.
 
-Pendiente: incorporar el catálogo y la compra pública sin cuenta (propuesta para el rol cliente, sujeta a confirmación docente), comprobar edición/baja de usuarios y sesiones previas, y finalizar los documentos de entrega. La tienda pública no está disponible en esta versión.
+- La tienda usa `GET /api/v1/productos/tienda`, `GET /api/v1/categorias/tienda` y `POST /api/v1/ventas/compra` sin JWT. La compra queda `PENDIENTE` con pago en efectivo al recibir. El servidor valida stock y precios.
+
+Pendiente: verificar la compra pública contra el backend real y sus permisos, comprobar edición/baja de usuarios y sesiones previas, confirmar con el docente que la compra sin cuenta satisface el rol cliente, y finalizar los documentos de entrega.
 
 ## Decisiones y documentación
 

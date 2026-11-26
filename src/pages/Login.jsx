@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { validarTexto } from '../utils/validaciones.js'
 
@@ -83,6 +83,7 @@ export default function Login() {
             </form>
             <p className="text-center text-muted small mt-3 mb-0">
               Solo personal autorizado. Los usuarios los crea el administrador.
+              <Link className="d-block mt-2" to="/tienda">Volver a la tienda</Link>
             </p>
           </div>
         </div>

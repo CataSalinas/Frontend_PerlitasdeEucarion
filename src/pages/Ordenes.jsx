@@ -6,7 +6,7 @@ import { listarBoletas, cambiarEstadoBoleta, anularBoleta } from '../services/bo
 import { claseEstado, etiquetaEstado, formatearPrecio } from '../utils/validaciones.js'
 import { Cargando, ErrorAviso, Vacio } from '../components/Avisos.jsx'
 
-export const ESTADOS = ['PAGADO', 'EN_PREPARACION', 'ENTREGADO', 'CANCELADO']
+export const ESTADOS = ['PENDIENTE', 'PAGADO', 'EN_PREPARACION', 'ENTREGADO', 'CANCELADO']
 
 export function formatearFecha(fecha) {
   if (!fecha) return '-'

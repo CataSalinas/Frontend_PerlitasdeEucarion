@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useRecurso } from '../hooks/useRecurso.js'
 import { listarProductos } from '../services/productosService.js'
 import { crearBoleta } from '../services/boletasService.js'
+import { listarTienda, comprarSinCuenta } from '../services/tiendaService.js'
+import ProductCard from '../components/ProductCard.jsx'
 import { regiones, comunas } from '../data/zonas.js'
 import { formatearPrecio, validarCantidad, validarCorreo, validarTexto } from '../utils/validaciones.js'
 import { Cargando, ErrorAviso, Vacio } from '../components/Avisos.jsx'
@@ -13,17 +15,20 @@ const CLIENTE_VACIO = {
 }
 
 /**
- * Adaptación del antiguo Checkout como pantalla interna: el ADMIN selecciona
- * productos y cantidades, valida stock y registra la venta. El total definitivo
+ * Formulario compartido: venta interna del ADMIN o compra pública sin cuenta.
+ * Valida productos y cantidades; el total definitivo
  * lo calcula el servidor (aquí solo se muestra un estimado).
  */
-export default function NuevaOrden() {
+export default function NuevaOrden({ publica = false }) {
   const navigate = useNavigate()
-  const { datos: productos, cargando, error } = useRecurso(listarProductos, [])
+  const { datos: productos, cargando, error, recargar } = useRecurso(publica ? listarTienda : listarProductos, [publica])
   const [seleccion, setSeleccion] = useState({ productoId: '', cantidad: '1' })
   const [items, setItems] = useState([])
   const [cliente, setCliente] = useState(CLIENTE_VACIO)
-  const [metodoPago, setMetodoPago] = useState('')
+  const [metodoPago, setMetodoPago] = useState(publica ? 'EFECTIVO' : '')
+  const [categoria, setCategoria] = useState('')
+  const [checkout, setCheckout] = useState(false)
+  const [confirmacion, setConfirmacion] = useState(null)
   const [errores, setErrores] = useState({})
   const [errorAccion, setErrorAccion] = useState('')
   const [guardando, setGuardando] = useState(false)
@@ -45,6 +50,12 @@ export default function NuevaOrden() {
       setErrorAccion('La cantidad debe ser un entero positivo.')
       return
     }
+    agregarProducto(producto, cantidad)
+    setSeleccion({ productoId: '', cantidad: '1' })
+  }
+
+  function agregarProducto(producto, cantidad = 1) {
+    setErrorAccion('')
     const yaSeleccionado = items.find((i) => i.productoId === producto.id)
     if ((yaSeleccionado ? yaSeleccionado.cantidad : 0) + cantidad > producto.stock) {
       setErrorAccion(`Stock insuficiente para ${producto.nombre}. Disponible: ${producto.stock}.`)
@@ -63,11 +74,11 @@ export default function NuevaOrden() {
         precioUnitario: producto.precioAhora
       }])
     }
-    setSeleccion({ productoId: '', cantidad: '1' })
     setErrores((anteriores) => ({ ...anteriores, items: '' }))
   }
 
   function cambiarCantidad(productoId, valor) {
+    if (guardando) return
     setErrorAccion('')
     const cantidad = Number(valor)
     const producto = lista.find((p) => p.id === productoId)
@@ -88,6 +99,7 @@ export default function NuevaOrden() {
 
   async function registrar(evento) {
     evento.preventDefault()
+    if (guardando || (publica && !checkout)) return
     const nuevos = {}
     if (items.length === 0) nuevos.items = 'Debe agregar al menos un producto.'
     if (!validarTexto(cliente.clienteNombre)) nuevos.clienteNombre = 'Ingrese el nombre.'
@@ -117,7 +129,15 @@ export default function NuevaOrden() {
     setGuardando(true)
     setErrorAccion('')
     try {
-      const boleta = await crearBoleta(cuerpo)
+      const boleta = await (publica ? comprarSinCuenta(cuerpo) : crearBoleta(cuerpo))
+      if (publica) {
+        setConfirmacion(boleta)
+        setItems([])
+        setCliente(CLIENTE_VACIO)
+        setCheckout(false)
+        recargar()
+        return
+      }
       navigate('/ordenes', {
         state: {
           mensaje: `Venta #${boleta.id} registrada. Total confirmado por el servidor: ${formatearPrecio(boleta.total)}.`
@@ -130,23 +150,69 @@ export default function NuevaOrden() {
     }
   }
 
+  if (publica && confirmacion) return (
+    <div className="card p-4">
+      <div className="text-center mb-3" role="status">
+        <h1 className="h3 titulo-gestion">¡Compra registrada!</h1>
+        <p className="mb-1">Orden #{confirmacion.id}</p>
+        <p className="mb-0">Pago pendiente. Paga en efectivo al recibir tu pedido.</p>
+      </div>
+      <h2 className="h5 titulo-gestion">Resumen de tu compra</h2>
+      <div className="table-responsive">
+        <table className="table align-middle">
+          <thead><tr><th>Producto</th><th>Cantidad</th><th>Precio unitario</th><th>Subtotal</th></tr></thead>
+          <tbody>
+            {(confirmacion.items || []).map((item) => (
+              <tr key={item.productoId}>
+                <td>{item.productoNombre}</td><td>{item.cantidad}</td>
+                <td>{formatearPrecio(item.precioUnitario)}</td><td>{formatearPrecio(item.subtotal)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-end resumen-total">Total a pagar: <strong>{formatearPrecio(confirmacion.total)}</strong></p>
+      <button type="button" className="btn btn-perla mx-auto" onClick={() => setConfirmacion(null)}>Volver a la tienda</button>
+    </div>
+  )
+
   return (
     <>
-      <h1 className="h3 titulo-gestion mb-1">Registrar venta</h1>
-      <p className="text-muted mb-4">Seleccione productos, ingrese los datos de entrega y confirme la boleta.</p>
+      {publica ? <section className="bg-perla rounded p-4 mb-4 text-center">
+        <h1 className="h2">Perlitas de Eucarión</h1>
+        <p className="lead mb-0">Bisutería artesanal · Compra sin registrarte</p>
+      </section> : <>
+        <h1 className="h3 titulo-gestion mb-1">Registrar venta</h1>
+        <p className="text-muted mb-4">Seleccione productos, ingrese los datos de entrega y confirme la boleta.</p>
+      </>}
+      {publica && !checkout && !cargando && !error && lista.length > 0 && <section className="mb-4">
+        <h2 className="h4 titulo-gestion">Catálogo</h2>
+        <label htmlFor="categoriaTienda" className="form-label">Filtrar por categoría</label>
+        <select id="categoriaTienda" className="form-select mb-3" value={categoria} onChange={(e) => setCategoria(e.target.value)}>
+          <option value="">Todas</option>
+          {[...new Set(lista.map((p) => p.categoria))].map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <div className="row g-3">
+          {lista.filter((p) => !categoria || p.categoria === categoria).map((p) => (
+            <div className="col-12 col-sm-6 col-lg-4" key={p.id}>
+              <ProductCard producto={p} agregar={agregarProducto} cantidad={items.find((i) => i.productoId === p.id)?.cantidad || 0} />
+            </div>
+          ))}
+        </div>
+      </section>}
 
       <ErrorAviso error={error} />
       <ErrorAviso error={errorAccion} />
 
       {cargando && <Cargando texto="Cargando catálogo..." />}
-      {!cargando && !error && lista.length === 0 && <Vacio texto="No hay productos disponibles para vender." />}
+      {!cargando && !error && lista.length === 0 && <Vacio texto="No hay productos disponibles." />}
 
-      {!cargando && lista.length > 0 && (
+      {!cargando && !error && (lista.length > 0 || items.length > 0) && (
         <form onSubmit={registrar} noValidate>
           <div className="card mb-4">
             <div className="card-body">
-              <h2 className="h5 titulo-gestion">1. Productos</h2>
-              <div className="row g-2 align-items-end">
+              <h2 className="h5 titulo-gestion">{publica ? "Carrito de compras" : "1. Productos"}</h2>
+              {!publica && <div className="row g-2 align-items-end">
                 <div className="col-12 col-md-7">
                   <label htmlFor="productoVenta" className="form-label">Producto</label>
                   <select id="productoVenta" className="form-select" value={seleccion.productoId}
@@ -168,10 +234,10 @@ export default function NuevaOrden() {
                 <div className="col-6 col-md-2">
                   <button type="button" className="btn btn-perla w-100" onClick={agregarItem}>Agregar</button>
                 </div>
-              </div>
+              </div>}
 
               {items.length === 0 ? (
-                <p className="text-muted mt-3 mb-0">Aún no ha agregado productos a la venta.</p>
+                <p className="text-muted mt-3 mb-0">{publica ? 'Tu carrito está vacío.' : 'Aún no ha agregado productos a la venta.'}</p>
               ) : (
                 <div className="table-responsive mt-3">
                   <table className="table table-sm align-middle tabla-gestion">
@@ -190,7 +256,7 @@ export default function NuevaOrden() {
                           <td>{formatearPrecio(item.precioUnitario * item.cantidad)}</td>
                           <td>
                             <button type="button" className="btn btn-sm btn-outline-danger"
-                              onClick={() => setItems(items.filter((i) => i.productoId !== item.productoId))}>
+                              disabled={guardando} onClick={() => setItems(items.filter((i) => i.productoId !== item.productoId))}>
                               Quitar
                             </button>
                           </td>
@@ -207,9 +273,12 @@ export default function NuevaOrden() {
             </div>
           </div>
 
+          {publica && !checkout && <button type="button" className="btn btn-perla" disabled={!items.length}
+            onClick={() => { setCheckout(true); setErrorAccion('') }}>Continuar compra</button>}
+          {(!publica || checkout) && <>
           <div className="card mb-4">
             <div className="card-body">
-              <h2 className="h5 titulo-gestion">2. Datos del cliente y entrega</h2>
+              <h2 className="h5 titulo-gestion">{publica ? 'Datos de entrega' : '2. Datos del cliente y entrega'}</h2>
               <div className="row">
                 <div className="col-12 col-md-6 mb-3">
                   <label htmlFor="clienteNombre" className="form-label">Nombre</label>
@@ -267,6 +336,7 @@ export default function NuevaOrden() {
             </div>
           </div>
 
+          {publica ? <p className="alert alert-light border">Método de pago: efectivo al recibir. No se realiza ningún cobro en línea.</p> :
           <div className="card mb-4">
             <div className="card-body">
               <label htmlFor="metodoPago" className="form-label">Método de pago</label>
@@ -279,14 +349,17 @@ export default function NuevaOrden() {
               </select>
               {errores.metodoPago && <div className="mensaje-error">{errores.metodoPago}</div>}
             </div>
-          </div>
+          </div>}
 
           <div className="d-flex gap-2">
-            <Link className="btn btn-outline-secondary" to="/ordenes">Cancelar</Link>
+            {publica ? <button type="button" className="btn btn-outline-secondary" disabled={guardando}
+              onClick={() => setCheckout(false)}>Volver al catálogo</button> :
+              <Link className="btn btn-outline-secondary" to="/ordenes">Cancelar</Link>}
             <button type="submit" className="btn btn-perla" disabled={guardando}>
-              {guardando ? 'Registrando...' : 'Registrar venta'}
+              {guardando ? 'Registrando...' : publica ? 'Confirmar compra' : 'Registrar venta'}
             </button>
           </div>
+          </>}
         </form>
       )}
     </>
