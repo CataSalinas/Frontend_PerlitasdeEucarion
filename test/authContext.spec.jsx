@@ -39,14 +39,9 @@ const USUARIO = {
 }
 
 describe('AuthContext (sesión)', () => {
-  it('login guarda tokens y usuario y deja la sesión autenticada', async () => {
-    const datos = {
-      accessToken: 'access-login', refreshToken: 'refresh-login',
-      tokenType: 'Bearer', expiresIn: 900, usuario: USUARIO
-    }
-    const fetchSpy = mockFetch((url) => url.includes('/auth/login')
-      ? respuestaOk(datos)
-      : respuestaError(404, 'no'))
+  it('login guarda JWT y usuario y deja la sesión autenticada', async () => {
+    const token = tokenValido()
+    const fetchSpy = mockFetch((url) => url.includes('/auth/login') ? respuestaOk(token) : respuestaError(404, 'no'))
 
     renderizar()
     fireEvent.click(screen.getByText('Ingresar'))
@@ -55,8 +50,8 @@ describe('AuthContext (sesión)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('estado').textContent).toBe('autenticado:ADMIN')
     })
-    expect(leerSesion().accessToken).toBe('access-login')
-    expect(screen.getByTestId('nombre').textContent).toBe('Ana')
+    expect(leerSesion().accessToken).toBe(token)
+    expect(screen.getByTestId('nombre').textContent).toBe('admin')
     expect(fetchSpy.calls.mostRecent().args[0]).toContain('/auth/login')
     // Login es público: no debe enviar Authorization.
     expect(fetchSpy.calls.mostRecent().args[1].headers.Authorization).toBeUndefined()
@@ -87,35 +82,19 @@ describe('AuthContext (sesión)', () => {
     expect(leerSesion()).toBeNull()
   })
 
-  it('si el access está expirado intenta refresh y conserva la sesión', async () => {
-    const expirado = tokenConExp(Math.floor(Date.now() / 1000) - 60)
-    guardarSesion({ accessToken: expirado, refreshToken: 'refresh-viejo', usuario: USUARIO })
-    const nuevos = {
-      accessToken: tokenValido(), refreshToken: 'refresh-nuevo',
-      tokenType: 'Bearer', expiresIn: 900, usuario: USUARIO
-    }
-    const fetchSpy = mockFetch((url) => url.includes('/auth/refresh')
-      ? respuestaOk(nuevos)
-      : respuestaError(401, 'Token expirado'))
-
+  it('si el JWT está expirado al recargar, limpia la sesión sin solicitar refresh', async () => {
+    guardarSesion({ accessToken: tokenConExp(Math.floor(Date.now() / 1000) - 60), usuario: USUARIO })
+    const fetchSpy = mockFetch(() => respuestaOk([]))
     renderizar()
-    await drenarEfectos()
-    await waitFor(() => expect(screen.getByTestId('estado').textContent).toBe('autenticado:ADMIN'))
-
-    expect(fetchSpy.calls.mostRecent().args[0]).toContain('/auth/refresh')
-    expect(leerSesion().refreshToken).toBe('refresh-nuevo')
+    await waitFor(() => expect(screen.getByText('PANTALLA DE LOGIN')).toBeTruthy())
+    expect(leerSesion()).toBeNull()
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 
-  it('si el refresh falla, limpia la sesión y envía a /login', async () => {
-    const expirado = tokenConExp(Math.floor(Date.now() / 1000) - 60)
-    guardarSesion({ accessToken: expirado, refreshToken: 'refresh-malo', usuario: USUARIO })
-    mockFetch((url) => url.includes('/auth/refresh')
-      ? respuestaError(401, 'Refresh inválido')
-      : respuestaError(401, 'Token expirado'))
-
+  it('cierra una sesión que vence mientras la página está abierta', async () => {
+    guardarSesion({ accessToken: tokenConExp(Math.floor(Date.now() / 1000) + 1), usuario: USUARIO })
     renderizar()
-    await drenarEfectos()
-    await waitFor(() => expect(screen.getByText('PANTALLA DE LOGIN')).toBeTruthy())
+    await screen.findByText('PANTALLA DE LOGIN', {}, { timeout: 2500 })
     expect(leerSesion()).toBeNull()
   })
 })

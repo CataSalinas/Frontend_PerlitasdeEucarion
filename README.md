@@ -1,11 +1,11 @@
 # Perlitas de Eucarión — Frontend de gestión interna
 
-SPA de **gestión interna** construida con React + Vite + Bootstrap. No es la tienda pública: el objetivo es administrar productos, categorías, órdenes/boletas y usuarios del personal consumiendo una API REST.
+SPA de **gestión interna** construida con React + Vite + Bootstrap. Administra productos, categorías, órdenes/boletas y usuarios del personal consumiendo la API REST real de Spring Boot. La tienda pública para clientes sin cuenta todavía está pendiente.
 
 - Repositorio: https://github.com/CataSalinas/Frontend_PerlitasdeEucarion
-- Backend real: Spring Boot del compañero en otro repositorio ([ENLACE AL REPO DEL BACKEND]), contrato en `http://localhost:8080/api/v1`.
-- Desarrollo sin backend: `mock-server/` (Express) implementa el mismo contrato.
-- Acceso: solo personal autorizado, con roles `ADMIN` y `VENDEDOR`. No hay registro público.
+- Backend real: https://github.com/Yulianacalvucura/Backend-Perlitas-de-Eucarion, disponible en `http://localhost:9090/api/v1`.
+- Desarrollo anterior: `mock-server/` (Express), conservado como referencia histórica. No representa el contrato actual del backend y no se utiliza en la integración real.
+- Acceso actual: personal autorizado, con roles `ADMIN` y `VENDEDOR`. Se propone incorporar la tienda pública sin registro de clientes.
 
 Proyecto de la asignatura DSY1104 Desarrollo Fullstack II. Integrantes: Yuliana Calvucura, Francisco Riveros y Catalina Salinas.
 
@@ -20,38 +20,49 @@ Proyecto de la asignatura DSY1104 Desarrollo Fullstack II. Integrantes: Yuliana 
 | Registrar ventas, cambiar estados, anular boletas | Sí | No |
 | Crear / editar / dar de baja usuarios | Sí | No |
 
-La interfaz oculta los controles no permitidos, pero **la autoridad es el backend**: cualquier intento directo de escritura con rol `VENDEDOR` termina en `403`.
+La interfaz oculta los controles no permitidos, pero **la autoridad es el backend**: las operaciones administrativas están restringidas por el Gateway y Spring Security. Se comprobó que una petición `PUT` de productos con JWT de vendedor devuelve `403`.
 
 ## Requisitos
 
 - Node.js 18 o superior y npm.
-- Opcional: backend Spring Boot en `http://localhost:8080/api/v1`. Si no está disponible, usar el mock.
+- Backend Spring Boot iniciado, Gateway en `http://localhost:9090/api/v1` y MySQL/MariaDB activo (ver README del backend).
 
 ## Puesta en marcha
 
-```bash
-cp .env.example .env          # en Windows: Copy-Item .env.example .env
-npm install
-npm run mock                  # terminal 1: API de desarrollo en :8080
-npm run dev                   # terminal 2: Vite en :5173
+Primero iniciar MySQL desde XAMPP y, desde la raíz del repositorio backend, ejecutar:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\iniciar.ps1
 ```
 
-Abrir `http://localhost:5173`. La aplicación siempre arranca en `/login`.
+Después, desde la raíz de este repositorio frontend:
 
-Usuarios del mock-server:
+```powershell
+Copy-Item .env.example .env
+npm install
+npm run dev
+```
 
-| Correo | Contraseña | Rol |
-| --- | --- | --- |
-| `admin@perlitas.cl` | `Admin123!` | `ADMIN` |
-| `vendedor@perlitas.cl` | `Vendedor123!` | `VENDEDOR` |
-
-Para apuntar al backend real basta con cambiar `VITE_API_URL` en `.env` y reiniciar Vite; no hay que tocar código:
+El archivo `.env` debe contener:
 
 ```env
-VITE_API_URL=http://localhost:8080/api/v1
+VITE_API_URL=/api/v1
 ```
 
-`.env` está ignorado por Git; solo se versiona `.env.example`. Ver más detalles en [`mock-server/README.md`](mock-server/README.md).
+Vite utiliza un proxy hacia `http://localhost:9090` y conserva el prefijo `/api/v1`. No iniciar el mock-server.
+
+Abrir `http://localhost:5173`. En esta versión la página principal redirige a `/panel` o `/login` si no hay sesión.
+
+Usuarios de desarrollo inicializados por el backend:
+
+| Usuario | Contraseña | Rol |
+| --- | --- | --- |
+| `admin` | `admin123` | `ADMIN` |
+| `vendedor` | `vendedor123` | `VENDEDOR` |
+
+Las cuentas nuevas del personal pueden iniciar sesión con su correo registrado. Estas credenciales de ejemplo son solo para desarrollo local; no deben utilizarse en producción.
+
+`.env` está ignorado por Git; solo se versiona `.env.example`. Ver también [`INTEGRACION_LOCAL.md`](INTEGRACION_LOCAL.md).
 
 ## Comandos
 
@@ -60,12 +71,23 @@ VITE_API_URL=http://localhost:8080/api/v1
 | `npm run dev` | Servidor de desarrollo Vite. |
 | `npm run build` | Empaquetado de producción en `dist/`. |
 | `npm run preview` | Servir el `dist/` generado. |
-| `npm run mock` | Levantar el mock-server (variables en `mock-server/.env`). |
+| `npm run mock` | Levantar el mock histórico; no se usa para validar la integración real. |
 | `npm test` | Jasmine + Karma con launcher `jsdom` y reporte de cobertura en `coverage/html`. |
 | `npm run test:watch` | Modo observador. |
 | `npm run test:chrome` | Igual que `npm test` pero con ChromeHeadless (requiere Chrome instalado). |
 
-Hay **39 pruebas** en 8 archivos de especificación: capa API/refresh, sesión persistente, rutas por rol, navbar, login, productos, órdenes y validaciones.
+Hay **39 pruebas** en 8 archivos de especificación: capa API, sesión persistente y expiración, rutas por rol, navbar, login, productos, órdenes y validaciones. Las pruebas usan respuestas simuladas de `fetch` adaptadas al contrato real; no sustituyen las pruebas manuales contra Spring Boot.
+
+Última ejecución verificada (25-11-2026): **39 de 39 pruebas exitosas**.
+
+| Métrica | Cobertura |
+| --- | ---: |
+| Statements | 74,57 % |
+| Branches | 70,43 % |
+| Functions | 75,00 % |
+| Lines | 76,71 % |
+
+La cobertura corresponde a los archivos incluidos en el reporte de Karma.
 
 ## Rutas
 
@@ -91,36 +113,46 @@ src/
   main.jsx                  entrada: BrowserRouter + AuthProvider + Bootstrap
   App.jsx                   rutas y RutaProtegida
   config.js                 API_URL desde VITE_API_URL (o valor por defecto)
-  context/AuthContext.jsx   sesión persistente, refresh, logout, sync entre pestañas
+  context/AuthContext.jsx   sesión persistente, expiración, logout, sync entre pestañas
   services/
-    api.js                  fetch + Authorization + refresh single-flight + errores
-    authService.js          login / refresh / perfil
-    productosService.js     /productos
+    api.js                  fetch + Authorization + manejo de errores y cierre de sesión
+    authService.js          login / logout / perfil
+    productosService.js     /productos y /categorias/relaciones
     categoriasService.js    /categorias
-    boletasService.js       /boletas
-    usuariosService.js      /usuarios
+    boletasService.js       /ventas
+    usuariosService.js      /auth/usuarios
   hooks/useRecurso.js       carga con estados carga/error/recarga
   components/               Navbar por rol, RutaProtegida, avisos, footer
   pages/                    pantallas de gestión
   utils/validaciones.js     validaciones y formato de precios/estados
-mock-server/                API de desarrollo (no producción)
+mock-server/                mock histórico (no usado en integración real)
 test/                       pruebas Jasmine + Karma
 docs/                       manual, integración y guía de presentación
 ```
 
 ## Sesión y seguridad (trade-off)
 
-Se guardan `accessToken`, `refreshToken` y el objeto `usuario` en `localStorage` con prefijo `perlitas_`. Eso permite que la sesión sobreviva a recargas y pestañas nuevas, como pide el enunciado.
+Se guardan `accessToken` y el objeto `usuario` en `localStorage` con prefijo `perlitas_`. Esto permite mantener la sesión al recargar. El login utiliza `nombreUsuario` y `contrasena` y recibe un JWT de texto plano; el frontend lee los claims `sub`, `roles` y `exp` para gestionar la sesión y la interfaz.
 
-**Trade-off:** `localStorage` es legible desde JavaScript, por lo que un XSS podría robar el token. Una cookie `HttpOnly` + `SameSite` sería más segura, pero el frontend no podría leerla y complicaría el contrato con el backend Spring Boot. Se acepta ese riesgo de forma explícita y se mitiga así:
+**Trade-off:** `localStorage` es legible desde JavaScript, por lo que un XSS podría robar el token. La validación de la firma y la autorización real corresponden al backend.
 
-- El backend valida todo: `401` / `403` son la única fuente de autoridad.
-- Los tokens se envían solo por `Authorization: Bearer` a la API configurada.
-- Ante un `401` se intenta **un solo refresh** (single-flight) y se reintenta la petición una vez; si falla, se limpia la sesión y se va a `/login`.
-- Al recargar se decodifica el claim `exp`; si el access venció se renueva antes de mostrar la app.
-- Cerrar sesión en una pestaña cierra la sesión en las demás mediante el evento `storage`.
+- Las peticiones protegidas envían `Authorization: Bearer` al Gateway.
+- Ante un `401` de la sesión activa, se limpia la sesión y se redirige a `/login`. Un `403` indica falta de permisos.
+- Al recargar se verifica el claim `exp`; al expirar, se debe volver a iniciar sesión. No se utilizan refresh tokens.
+- Cerrar sesión en una pestaña se sincroniza con las demás mediante el evento `storage`.
+- El Gateway comprueba la cuenta activa y el rol actual en las peticiones protegidas.
 
-No hay secretos versionados: `.env` y `node_modules/` están ignorados. La clave JWT del mock es de desarrollo.
+`.env` y `node_modules/` están ignorados por Git. El mock y el backend incluyen configuraciones de desarrollo que no deben utilizarse para producción.
+
+## Integración y alcance actual
+
+- Productos y categorías se consultan y modifican en la base de datos mediante REST. `productosService.js` adapta `precioVenta` y `stockDisponible` a los campos de la interfaz y consulta las relaciones de categorías.
+- El registro de una venta por ADMIN envía los datos del cliente, el método de pago y los identificadores/cantidades de productos a `/api/v1/ventas/registro`. El backend calcula el total y descuenta el stock.
+- Las órdenes se consultan desde `/api/v1/ventas`. El administrador puede cambiar su estado o anularlas, lo que devuelve stock.
+- El personal se gestiona a través de `/api/v1/auth/usuarios`.
+- Se comprobaron manualmente el login de ambos roles, categorías, CRUD de productos, registro de venta, detalle de orden, descuento y devolución de stock, y la pantalla de acceso denegado del vendedor.
+
+Pendiente: incorporar el catálogo y la compra pública sin cuenta (propuesta para el rol cliente, sujeta a confirmación docente), comprobar edición/baja de usuarios y sesiones previas, y finalizar los documentos de entrega. La tienda pública no está disponible en esta versión.
 
 ## Decisiones y documentación
 
@@ -130,4 +162,4 @@ No hay secretos versionados: `.env` y `node_modules/` están ignorados. La clave
 - [`docs/Guia_Presentacion.md`](docs/Guia_Presentacion.md): guion de demostración y preguntas frecuentes.
 - [`CHECKLIST_RUBRICA.md`](CHECKLIST_RUBRICA.md): verificación final de la entrega.
 
-Los commits siguen **Conventional Commits** (`feat:`, `fix:`, `test:`, `docs:`, `chore:`). El repositorio tiene remoto en GitHub y se hizo push; el historial incluye varias ramas fusionadas.
+Los commits documentan los cambios de integración, correcciones y pruebas. Los documentos Markdown anteriores son material de apoyo y deben actualizarse con el contrato REST real y las capturas finales antes de la entrega.

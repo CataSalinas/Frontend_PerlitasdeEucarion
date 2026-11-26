@@ -25,7 +25,7 @@ module.exports = function (config) {
       devtool: false,
       plugins: [
         new webpack.DefinePlugin({
-          'globalThis.VITE_API_URL': JSON.stringify('http://localhost:8080/api/v1')
+          'globalThis.VITE_API_URL': JSON.stringify('/api/v1')
         })
       ],
       resolve: { extensions: ['.js', '.jsx'] },

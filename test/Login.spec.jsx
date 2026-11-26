@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from '../src/context/AuthContext.jsx'
 import Login from '../src/pages/Login.jsx'
-import { mockFetch, respuestaError, respuestaOk } from './helpers.jsx'
+import { mockFetch, respuestaError, respuestaOk, tokenValido } from './helpers.jsx'
 
 function renderizar() {
   return render(
@@ -18,7 +18,7 @@ function renderizar() {
 }
 
 function llenarFormulario() {
-  fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'admin@perlitas.cl' } })
+  fireEvent.change(screen.getByLabelText('Usuario o correo'), { target: { value: 'admin@perlitas.cl' } })
   fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'Admin123!' } })
 }
 
@@ -29,7 +29,7 @@ describe('Login', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Ingresar' }))
 
-    expect(screen.getByText('Debe ingresar su correo.')).toBeTruthy()
+    expect(screen.getByText('Debe ingresar su usuario o correo.')).toBeTruthy()
     expect(screen.getByText('Debe ingresar su contraseña.')).toBeTruthy()
     expect(fetchSpy).not.toHaveBeenCalled()
   })
@@ -42,7 +42,7 @@ describe('Login', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ingresar' }))
 
     await waitFor(() => {
-      expect(screen.getByText('Correo o contraseña incorrectos.')).toBeTruthy()
+      expect(screen.getByText('Usuario o contraseña incorrectos.')).toBeTruthy()
     })
   })
 
@@ -59,16 +59,13 @@ describe('Login', () => {
   })
 
   it('con credenciales válidas navega al panel', async () => {
-    const datos = {
-      accessToken: 'access-ok', refreshToken: 'refresh-ok', tokenType: 'Bearer', expiresIn: 900,
-      usuario: { id: 1, nombre: 'Ana', apellidos: 'Admin', correo: 'admin@perlitas.cl', rol: 'ADMIN' }
-    }
-    mockFetch(() => respuestaOk(datos))
+    const fetchSpy = mockFetch(() => respuestaOk(tokenValido()))
     renderizar()
     llenarFormulario()
 
     fireEvent.click(screen.getByRole('button', { name: 'Ingresar' }))
 
     await waitFor(() => expect(screen.getByText('PANEL DE GESTIÓN')).toBeTruthy())
+    expect(JSON.parse(fetchSpy.calls.mostRecent().args[1].body)).toEqual({ nombreUsuario: 'admin@perlitas.cl', contrasena: 'Admin123!' })
   })
 })

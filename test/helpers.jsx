@@ -30,7 +30,7 @@ export const CATEGORIAS_FALSAS = [
 /** JWT falso con claim exp; la firma no importa porque las pruebas mockean fetch. */
 export function tokenConExp(exp, datos = {}) {
   const payload = {
-    sub: '1', correo: 'admin@perlitas.cl', rol: 'ADMIN', exp, ...datos
+    sub: 'admin', roles: ['ADMIN'], exp, ...datos
   }
   const codificado = btoa(JSON.stringify(payload))
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
@@ -38,13 +38,12 @@ export function tokenConExp(exp, datos = {}) {
 }
 
 export function tokenValido(rol = 'ADMIN') {
-  return tokenConExp(Math.floor(Date.now() / 1000) + 3600, { rol })
+  return tokenConExp(Math.floor(Date.now() / 1000) + 3600, { roles: [rol] })
 }
 
 export function iniciarSesion(rol = 'ADMIN') {
   const sesion = guardarSesion({
     accessToken: tokenValido(rol),
-    refreshToken: 'refresh-valido',
     tokenType: 'Bearer',
     expiresIn: 3600,
     usuario: {
@@ -58,7 +57,8 @@ export function respuestaOk(cuerpo, status = 200) {
   return {
     ok: true,
     status,
-    json: () => Promise.resolve(cuerpo)
+    json: () => Promise.resolve(cuerpo),
+    text: () => Promise.resolve(typeof cuerpo === 'string' ? cuerpo : JSON.stringify(cuerpo))
   }
 }
 

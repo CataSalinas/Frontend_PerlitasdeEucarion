@@ -4,7 +4,7 @@ import { API_URL } from '../config.js'
  * Capa de transporte hacia la API REST.
  * - Antepone VITE_API_URL.
  * - Agrega el header Authorization: Bearer <accessToken>.
- * - Si recibe 401, intenta UNA renovación con el refresh token y reintenta una sola vez.
+ * - Si recibe 401 en una petición autenticada, finaliza la sesión.
  * - Normaliza los errores del backend usando el campo `message`.
  */
 export const CLAVES_SESION = {
@@ -15,7 +15,6 @@ export const CLAVES_SESION = {
 
 const oyentesSesion = new Set()
 let oyenteCierre = null
-let promesaRefresh = null
 
 export class ApiError extends Error {
   constructor(message, status, payload = null) {
@@ -60,10 +59,9 @@ function cerrarSesionForzada() {
 export function leerSesion() {
   try {
     const accessToken = localStorage.getItem(CLAVES_SESION.accessToken)
-    const refreshToken = localStorage.getItem(CLAVES_SESION.refreshToken)
     const usuario = JSON.parse(localStorage.getItem(CLAVES_SESION.usuario) || 'null')
     if (!accessToken || !usuario) return null
-    return { accessToken, refreshToken, usuario }
+    return { accessToken, usuario }
   } catch {
     return null
   }
@@ -72,7 +70,7 @@ export function leerSesion() {
 export function guardarSesion(datos) {
   if (!datos || !datos.accessToken || !datos.usuario) return null
   localStorage.setItem(CLAVES_SESION.accessToken, datos.accessToken)
-  localStorage.setItem(CLAVES_SESION.refreshToken, datos.refreshToken || '')
+  localStorage.removeItem(CLAVES_SESION.refreshToken)
   localStorage.setItem(CLAVES_SESION.usuario, JSON.stringify(datos.usuario))
   notificarSesion()
   return leerSesion()
@@ -110,55 +108,6 @@ export function tokenExpirado(token, ahora = Date.now()) {
 }
 
 // ---------------------------------------------------------------------------
-// Renovación de access token (una sola petición aunque fallen varias en paralelo)
-// ---------------------------------------------------------------------------
-
-export function renovarAccessToken() {
-  if (promesaRefresh) return promesaRefresh
-
-  const sesion = leerSesion()
-  if (!sesion || !sesion.refreshToken) {
-    return Promise.reject(new ApiError('Su sesión expiró. Inicie sesión nuevamente.', 401))
-  }
-
-  promesaRefresh = (async () => {
-    try {
-      let respuesta
-      try {
-        respuesta = await fetch(`${API_URL}/auth/refresh`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ refreshToken: sesion.refreshToken })
-        })
-      } catch {
-        throw new ApiError('No se pudo conectar con el servidor', 0)
-      }
-
-      if (!respuesta.ok) {
-        let payload = null
-        try { payload = await respuesta.json() } catch { /* cuerpo vacío */ }
-        throw new ApiError(
-          (payload && payload.message) || 'No fue posible renovar la sesión',
-          respuesta.status,
-          payload
-        )
-      }
-
-      const datos = await respuesta.json()
-      if (!datos.accessToken || !datos.usuario) {
-        throw new ApiError('La respuesta de renovación no tiene el formato esperado', 500, datos)
-      }
-      guardarSesion(datos)
-      return datos
-    } finally {
-      promesaRefresh = null
-    }
-  })()
-
-  return promesaRefresh
-}
-
-// ---------------------------------------------------------------------------
 // petición genérica
 // ---------------------------------------------------------------------------
 
@@ -178,10 +127,10 @@ function mensajeDelBackend(respuesta, payload) {
 
 /**
  * @param {string} ruta ruta relativa a VITE_API_URL
- * @param {object} opciones { method, body, auth = true, reintentar = true, signal }
+ * @param {object} opciones { method, body, auth = true, signal }
  */
 export async function apiFetch(ruta, opciones = {}) {
-  const { method = 'GET', body, auth = true, reintentar = true, signal, texto = false } = opciones
+  const { method = 'GET', body, auth = true, signal, texto = false } = opciones
   const sesion = leerSesion()
   const cabeceras = { Accept: 'application/json' }
 
@@ -206,17 +155,8 @@ export async function apiFetch(ruta, opciones = {}) {
     let payload = null
     try { payload = await respuesta.json() } catch { /* cuerpo vacío */ }
 
-    if (respuesta.status === 401 && auth) {
-      if (reintentar && sesion && sesion.refreshToken) {
-        try {
-          await renovarAccessToken()
-          // Reintento único: `reintentar: false` evita bucles si el access sigue siendo rechazado.
-          return apiFetch(ruta, { ...opciones, reintentar: false })
-        } catch (error) {
-          cerrarSesionForzada()
-          throw error
-        }
-      }
+    // Una respuesta vieja no debe cerrar una sesión que acaba de cambiar.
+    if (respuesta.status === 401 && auth && sesion && leerSesion()?.accessToken === sesion.accessToken) {
       cerrarSesionForzada()
     }
 

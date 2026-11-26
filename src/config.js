@@ -5,5 +5,5 @@
  * Así evitamos `import.meta.env` en código compartido con Jasmine.
  */
 export const API_URL = String(
-  globalThis.VITE_API_URL || 'http://localhost:8080/api/v1'
+  globalThis.VITE_API_URL || '/api/v1'
 ).replace(/\/$/, '')

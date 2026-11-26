@@ -17,10 +17,14 @@ function renderizar(rol) {
 
 function mockCatalogo() {
   return mockFetch((url, opciones) => {
+    if (String(url).includes('/categorias/relaciones')) {
+      if (opciones.method === 'DELETE') return respuestaOk(null, 204)
+      return respuestaOk(PRODUCTOS_FALSOS.map(p => ({ productoId: p.id, categoria: CATEGORIAS_FALSAS.find(c => c.id === p.categoriaId) })))
+    }
     if (String(url).includes('/categorias')) return respuestaOk(CATEGORIAS_FALSAS)
     if (String(url).includes('/productos')) {
       if (opciones.method === 'DELETE') return respuestaOk(null, 204)
-      return respuestaOk(PRODUCTOS_FALSOS)
+      return respuestaOk(PRODUCTOS_FALSOS.map(p => ({ id: p.id, nombre: p.nombre, descripcion: p.descripcion, precioAntes: p.precioAntes, precioVenta: p.precioAhora, stockDisponible: p.stock, activo: true })))
     }
     return respuestaOk([])
   })

@@ -18,12 +18,12 @@ const BOLETA = {
   regionId: 1000,
   comunaId: 1022,
   indicaciones: '',
-  detalles: []
+  productos: []
 }
 
 function renderizar(rol) {
   iniciarSesion(rol)
-  mockFetch((url) => String(url).includes('/boletas') ? respuestaOk([BOLETA]) : respuestaOk([]))
+  mockFetch((url) => String(url).includes('/ventas') ? respuestaOk([BOLETA]) : respuestaOk([]))
   return render(
     <MemoryRouter>
       <AuthProvider><Ordenes /></AuthProvider>

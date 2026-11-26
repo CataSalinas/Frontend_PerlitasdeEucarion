@@ -6,7 +6,7 @@ import {
   leerSesion,
   limpiarSesion,
   registrarCierreSesion,
-  renovarAccessToken,
+  obtenerExpiracion,
   suscribirSesion,
   tokenExpirado
 } from '../services/api.js'
@@ -42,38 +42,30 @@ export function AuthProvider({ children }) {
     }
   }, [navigate])
 
-  // Restauración al montar: decodifica exp y renueva si hace falta.
+  // Sin refresh token: una sesión vencida requiere volver a iniciar sesión.
   useEffect(() => {
-    let activo = true
-
-    async function restaurar() {
-      const actual = leerSesion()
-      if (!actual) {
-        if (activo) setCargando(false)
-        return
-      }
-
-      if (tokenExpirado(actual.accessToken)) {
-        try {
-          await renovarAccessToken()
-        } catch {
-          // La renovación falló (refresh inválido, red caída, etc.).
-          // Limpiamos aquí también: apiFetch solo cierra la sesión cuando el
-          // 401 ocurre durante una petición, pero al restaurar no hay petición.
-          limpiarSesion()
-          if (activo) navigate('/login', { replace: true })
-        }
-      }
-
-      if (activo) {
-        setSesion(leerSesion())
-        setCargando(false)
-      }
+    const actual = leerSesion()
+    if (actual && tokenExpirado(actual.accessToken)) {
+      limpiarSesion()
+      navigate('/login', { replace: true })
     }
+    setSesion(leerSesion())
+    setCargando(false)
+  }, [navigate])
 
-    restaurar()
-    return () => { activo = false }
-  }, [])
+  // Cierra la sesión al vencer el JWT, incluso sin nuevas peticiones.
+  useEffect(() => {
+    if (!sesion) return
+    const exp = obtenerExpiracion(sesion.accessToken)
+    if (exp === null) return
+    const cerrar = () => {
+      if (leerSesion()?.accessToken !== sesion.accessToken) return
+      limpiarSesion()
+      navigate('/login', { replace: true })
+    }
+    const timer = setTimeout(cerrar, Math.max(0, exp * 1000 - Date.now()))
+    return () => clearTimeout(timer)
+  }, [sesion, navigate])
 
   // Sincronización entre pestañas: si otra cierra sesión, esta también.
   useEffect(() => {
@@ -97,7 +89,6 @@ export function AuthProvider({ children }) {
     usuario: sesion ? sesion.usuario : null,
     rol: sesion ? sesion.usuario.rol : null,
     accessToken: sesion ? sesion.accessToken : null,
-    refreshToken: sesion ? sesion.refreshToken : null,
     cargando,
     isAuthenticated: Boolean(sesion && sesion.usuario && sesion.accessToken),
 
