@@ -1,21 +1,71 @@
 import { apiFetch } from './api.js'
 
-export function listarProductos() {
-  return apiFetch('/productos')
+function adaptarProducto(producto, relaciones) {
+  const relacion = relaciones.find((r) => r.productoId === producto.id)
+  return {
+    ...producto,
+    precioAntes: producto.precioAntes ?? producto.precioVenta,
+    precioAhora: producto.precioVenta,
+    stock: producto.stockDisponible,
+    categoriaId: relacion?.categoria?.id ?? '',
+    categoria: relacion?.categoria?.nombre ?? 'Sin categoría'
+  }
 }
 
-export function obtenerProducto(id) {
-  return apiFetch(`/productos/${id}`)
+function prepararProducto(datos, activo = true) {
+  return {
+    nombre: datos.nombre,
+    descripcion: datos.descripcion,
+    precioAntes: datos.precioAntes,
+    precioVenta: datos.precioAhora,
+    stockDisponible: datos.stock,
+    activo
+  }
 }
 
-export function crearProducto(datos) {
-  return apiFetch('/productos', { method: 'POST', body: datos })
+export async function listarProductos() {
+  const [productos, relaciones] = await Promise.all([
+    apiFetch('/productos'),
+    apiFetch('/categorias/relaciones')
+  ])
+  return productos.map((producto) => adaptarProducto(producto, relaciones))
 }
 
-export function actualizarProducto(id, datos) {
-  return apiFetch(`/productos/${id}`, { method: 'PUT', body: datos })
+export async function obtenerProducto(id) {
+  const [producto, relaciones] = await Promise.all([
+    apiFetch(`/productos/${id}`),
+    apiFetch('/categorias/relaciones')
+  ])
+  return adaptarProducto(producto, relaciones)
 }
 
-export function eliminarProducto(id) {
-  return apiFetch(`/productos/${id}`, { method: 'DELETE' })
+function asignarCategoria(id, categoriaId) {
+  return apiFetch(`/categorias/relaciones/${id}?categoriaId=${categoriaId}`, { method: 'PUT' })
+}
+
+export async function crearProducto(datos) {
+  const producto = await apiFetch('/productos', { method: 'POST', body: prepararProducto(datos) })
+  try {
+    await asignarCategoria(producto.id, datos.categoriaId)
+  } catch (error) {
+    try { await apiFetch(`/productos/${producto.id}`, { method: 'DELETE' }) } catch {
+      throw new Error('El producto se creó, pero no se pudo asignar su categoría. Revise el listado antes de reintentar.')
+    }
+    throw error
+  }
+  return adaptarProducto(producto, [{ productoId: producto.id, categoria: await apiFetch(`/categorias/${datos.categoriaId}`) }])
+}
+
+export async function actualizarProducto(id, datos) {
+  const anterior = await apiFetch(`/productos/${id}`)
+  const producto = await apiFetch(`/productos/${id}`, {
+    method: 'PUT', body: { ...anterior, ...prepararProducto(datos, anterior.activo) }
+  })
+  await asignarCategoria(id, datos.categoriaId)
+  return adaptarProducto(producto, [{ productoId: producto.id, categoria: await apiFetch(`/categorias/${datos.categoriaId}`) }])
+}
+
+export async function eliminarProducto(id) {
+  await apiFetch(`/productos/${id}`, { method: 'DELETE' })
+  await apiFetch(`/categorias/relaciones/${id}`, { method: 'DELETE' })
 }

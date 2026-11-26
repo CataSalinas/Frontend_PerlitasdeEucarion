@@ -1,12 +1,27 @@
-import { apiFetch, guardarSesion, limpiarSesion, renovarAccessToken } from './api.js'
+import { apiFetch, guardarSesion, limpiarSesion, renovarAccessToken, decodificarJwt } from './api.js'
 
-/** Inicia sesión y persiste tokens + usuario. */
 export async function login(correo, password) {
-  const datos = await apiFetch('/auth/login', {
+  const token = await apiFetch('/auth/login', {
     method: 'POST',
-    body: { correo, password },
-    auth: false
+    body: {
+      nombreUsuario: correo,
+      contrasena: password
+    },
+    auth: false,
+    texto: true
   })
+
+  const payload = decodificarJwt(token)
+
+  const datos = {
+    accessToken: token,
+    refreshToken: '',
+    usuario: {
+      nombre: payload.sub,
+      rol: payload.roles.includes('ADMIN') ? 'ADMIN' : 'VENDEDOR'
+    }
+  }
+
   guardarSesion(datos)
   return datos
 }

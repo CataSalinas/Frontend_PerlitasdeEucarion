@@ -62,7 +62,7 @@ export function leerSesion() {
     const accessToken = localStorage.getItem(CLAVES_SESION.accessToken)
     const refreshToken = localStorage.getItem(CLAVES_SESION.refreshToken)
     const usuario = JSON.parse(localStorage.getItem(CLAVES_SESION.usuario) || 'null')
-    if (!accessToken || !refreshToken || !usuario) return null
+    if (!accessToken || !usuario) return null
     return { accessToken, refreshToken, usuario }
   } catch {
     return null
@@ -180,7 +180,7 @@ function mensajeDelBackend(respuesta, payload) {
  * @param {object} opciones { method, body, auth = true, reintentar = true, signal }
  */
 export async function apiFetch(ruta, opciones = {}) {
-  const { method = 'GET', body, auth = true, reintentar = true, signal } = opciones
+  const { method = 'GET', body, auth = true, reintentar = true, signal, texto = false } = opciones
   const sesion = leerSesion()
   const cabeceras = { Accept: 'application/json' }
 
@@ -223,6 +223,7 @@ export async function apiFetch(ruta, opciones = {}) {
   }
 
   if (respuesta.status === 204) return null
+  if (texto) return await respuesta.text()
   try {
     return await respuesta.json()
   } catch {

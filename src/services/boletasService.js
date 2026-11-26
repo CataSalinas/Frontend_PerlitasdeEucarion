@@ -1,7 +1,7 @@
-import { apiFetch } from './api.js'
+  import { apiFetch } from './api.js'
 
 export function listarBoletas() {
-  return apiFetch('/boletas')
+  return apiFetch('/ventas')
 }
 
 export function obtenerBoleta(id) {
